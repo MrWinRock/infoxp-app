@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface IGame extends Document {
   title: string;
-  genre: string;
+  genre: string[];
   description: string;
   release_date: Date;
   createdAt: Date;
@@ -12,7 +12,7 @@ export interface IGame extends Document {
 const gameSchema: Schema = new Schema(
   {
     title: { type: String, required: true },
-    genre: { type: String, required: true },
+    genre: { type: [String], required: true },
     description: { type: String, required: true },
     release_date: { type: Date, required: true },
   },
