@@ -1,14 +1,14 @@
 {
-  "name": "infoxp-backend",
+  "name": "infoxp-app",
   "version": "1.0.0",
   "description": "A TypeScript-based Node.js backend using Express.js.",
-  "homepage": "https://github.com/MrWinRock/infoxp-backend#readme",
+  "homepage": "https://github.com/MrWinRock/infoxp-app#readme",
   "bugs": {
-    "url": "https://github.com/MrWinRock/infoxp-backend/issues"
+    "url": "https://github.com/MrWinRock/infoxp-app/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MrWinRock/infoxp-backend.git"
+    "url": "git+https://github.com/MrWinRock/infoxp-app.git"
   },
   "license": "ISC",
   "author": "",
@@ -20,10 +20,15 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts"
   },
   "dependencies": {
+    "axios": "^1.9.0",
+    "body-parser": "^2.2.0",
+    "cheerio": "^1.0.0",
+    "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "express": "^4.18.2",
+    "express": "^4.21.2",
     "mongodb": "^6.15.0",
-    "mongoose": "^8.13.2"
+    "mongoose": "^8.13.2",
+    "puppeteer": "^24.10.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.17",

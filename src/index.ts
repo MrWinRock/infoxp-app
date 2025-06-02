@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import { connectToDatabase } from "./config/database";
 import userRoutes from "./routes/userRoutes";
+import gameRoutes from "./routes/gameRoutes";
 
 dotenv.config();
 
@@ -16,8 +17,14 @@ app.get("/", (req, res) => {
   res.send("Hello, world!");
 });
 
+// Fish
+app.get("/fish", (req, res) => {
+  res.type("html").send("<><");
+});
+
 // Use user routes
 app.use("/api/users", userRoutes);
+app.use("/api/games", gameRoutes);
 
 // Start the Express server
 app.listen(port, () => {
