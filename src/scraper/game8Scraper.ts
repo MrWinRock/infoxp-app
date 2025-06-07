@@ -134,7 +134,6 @@ const scrapeGameDetails = async (browser: Browser, url: string) => {
   let releaseDateText = "";
   let title = "";
 
-  // 1. Try to get the title from the <h2> header
   try {
     title = await page.$eval(
       "h2.a-header--2#hl_24",
@@ -142,7 +141,6 @@ const scrapeGameDetails = async (browser: Browser, url: string) => {
     );
   } catch {}
 
-  // 2. Try to get a summary/description from a common class or from the table
   try {
     description = await page.$eval(
       ".p-game-lead__text",
@@ -163,7 +161,6 @@ const scrapeGameDetails = async (browser: Browser, url: string) => {
     } catch {}
   }
 
-  // 3. Parse the table for genre and release date
   try {
     const tableData = await page.$$eval("table.a-table tr", (rows) => {
       let genre: string[] = [];
@@ -212,7 +209,6 @@ const scrapeGameDetails = async (browser: Browser, url: string) => {
 
   await page.close();
 
-  // 4. Fallback: use the page's <title> if no title found
   if (!title) {
     try {
       title = await page.title();
