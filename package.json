@@ -28,7 +28,9 @@
     "express": "^4.21.2",
     "mongodb": "^6.15.0",
     "mongoose": "^8.13.2",
-    "puppeteer": "^24.10.0"
+    "puppeteer": "^24.10.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
   },
   "devDependencies": {
     "@types/express": "^4.17.17",
