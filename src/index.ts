@@ -3,11 +3,15 @@ import dotenv from "dotenv";
 import { connectToDatabase } from "./config/database";
 import userRoutes from "./routes/userRoutes";
 import gameRoutes from "./routes/gameRoutes";
+import chatRoutes from "./routes/chatRoutes";
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+app.use(express.json());
+app.use(express.static("public"));
 
 // Call the database connection function
 connectToDatabase();
@@ -25,6 +29,7 @@ app.get("/fish", (req, res) => {
 // Use user routes
 app.use("/api/users", userRoutes);
 app.use("/api/games", gameRoutes);
+app.use("/api/chat", chatRoutes);
 
 // Start the Express server
 app.listen(port, () => {
