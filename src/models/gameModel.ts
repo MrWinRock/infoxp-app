@@ -27,6 +27,6 @@ const gameSchema: Schema = new Schema(
   { timestamps: true }
 );
 
-const Game = mongoose.model<IGame>("Game", gameSchema);
+const Game = mongoose.model<IGame>("Games", gameSchema);
 
 export default Game;

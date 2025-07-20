@@ -1,0 +1,19 @@
+# Bun configuration file
+
+[install]
+# Configure package manager behavior
+cache = true
+exact = false
+production = false
+
+[run]
+# Configure runtime behavior
+bun = true
+
+[test]
+# Configure test runner
+preload = []
+
+[build]
+# Configure bundler
+target = "bun"
