@@ -1,12 +1,22 @@
 import express from "express";
-import { getUsers, createUser } from "../controllers/userController";
+import {
+    getUsers,
+    createUser,
+    loginUser,
+    getUserById,
+    getProfile,
+    updatePassword
+} from "../controllers/userController";
+import { authenticateToken } from "../middlewares/authMiddleware";
 
 const router = express.Router();
 
-// Route to get all users
 router.get("/", getUsers);
+router.get("/:id", getUserById);
+router.post("/register", createUser);
+router.post("/login", loginUser);
 
-// Route to create a new user
-router.post("/", createUser);
+router.get("/profile/me", authenticateToken, getProfile);
+router.put("/:id/password", authenticateToken, updatePassword);
 
 export default router;

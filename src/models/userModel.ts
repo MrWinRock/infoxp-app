@@ -1,27 +1,36 @@
 import mongoose, { Schema, Document } from "mongoose";
-
-// Define the User interface
+import bcrypt from "bcrypt";
 export interface IUser extends Document {
-  name: string;
+  name?: string;
   email?: string;
   password?: string;
-  profile_picture: string;
-  date_of_birth: Date;
+  date_of_birth?: Date;
+  comparePassword(candidatePassword: string): Promise<boolean>;
 }
-
-// Define the User schema
 const userSchema: Schema = new Schema(
   {
     name: { type: String, required: true },
     email: { type: String },
     password: { type: String },
-    profile_picture: { type: String, default: "" },
     date_of_birth: { type: Date },
   },
   { timestamps: true }
 );
+userSchema.pre<IUser>("save", async function (next) {
+  if (!this.isModified("password") || !this.password) return next();
 
-// Create the User model
+  try {
+    const saltRounds = 12;
+    this.password = await bcrypt.hash(this.password, saltRounds);
+    next();
+  } catch (error) {
+    next(error as Error);
+  }
+});
+userSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
+  if (!this.password) return false;
+  return bcrypt.compare(candidatePassword, this.password);
+};
 const User = mongoose.model<IUser>("Users", userSchema);
 
 export default User;

@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import ChatSession from "../models/chatSessionModel";
 import ChatMessage from "../models/chatMessageModel";
 import { queryLLM } from "../services/llmService";

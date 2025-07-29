@@ -22,11 +22,13 @@
   },
   "dependencies": {
     "axios": "^1.9.0",
+    "bcrypt": "^6.0.0",
     "body-parser": "^2.2.0",
     "cheerio": "^1.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.15.0",
     "mongoose": "^8.13.2",
     "puppeteer": "^24.10.0",
@@ -34,6 +36,8 @@
     "puppeteer-extra-plugin-stealth": "^2.11.2"
   },
   "devDependencies": {
-    "@types/express": "^4.17.17"
+    "@types/bcrypt": "^6.0.0",
+    "@types/express": "^4.17.17",
+    "@types/jsonwebtoken": "^9.0.10"
   }
 }
