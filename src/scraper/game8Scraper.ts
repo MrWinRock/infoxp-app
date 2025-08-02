@@ -139,7 +139,7 @@ const scrapeGameDetails = async (browser: Browser, url: string) => {
       "h2.a-header--2#hl_24",
       (el) => el.textContent?.trim() || ""
     );
-  } catch {}
+  } catch { }
 
   try {
     description = await page.$eval(
@@ -158,7 +158,7 @@ const scrapeGameDetails = async (browser: Browser, url: string) => {
         }
         return "";
       });
-    } catch {}
+    } catch { }
   }
 
   try {
@@ -205,14 +205,14 @@ const scrapeGameDetails = async (browser: Browser, url: string) => {
 
     genre = tableData.genre;
     releaseDateText = tableData.releaseDate;
-  } catch {}
+  } catch { }
 
   await page.close();
 
   if (!title) {
     try {
       title = await page.title();
-    } catch {}
+    } catch { }
   }
 
   return {

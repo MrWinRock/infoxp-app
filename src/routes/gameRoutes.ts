@@ -1,31 +1,41 @@
-import express, { Request, Response } from "express";
-import Game from "../models/gameModel";
-import { queryLLM } from "../services/llmService";
+import { Router } from "express";
+import {
+  getGames,
+  getGameById,
+  queryGameWithLLM,
+  searchGames,
+  getGamesByGenre,
+  createGame,
+  updateGame,
+  deleteGame,
+  getAvailableGenres,
+  getGamesByCategory,
+  getGameStatistics,
+  getTopGames,
+  importGamesFromJSON,
+  importGamesFromCSV,
+  bulkImportSteamDBData
+} from "../controllers/gameController";
 
-const router = express.Router();
+const router = Router();
 
-router.get("/", async (_req: Request, res: Response) => {
-  try {
-    const games = await Game.find();
-    res.json(games);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch games." });
-  }
-});
+// Basic CRUD
+router.get("/", getGames);
+router.get("/search", searchGames);
+router.get("/stats", getGameStatistics);
+router.get("/top", getTopGames);
+router.get("/genres", getAvailableGenres);
+router.get("/category/:category", getGamesByCategory);
+router.get("/genre/:genre", getGamesByGenre);
+router.get("/:id", getGameById);
+router.post("/", createGame);
+router.put("/:id", updateGame);
+router.delete("/:id", deleteGame);
+router.post("/query", queryGameWithLLM);
 
-router.post("/query", async (req: Request, res: Response) => {
-  const { gameTitle } = req.body;
-  try {
-    const game = await Game.findOne({ title: gameTitle });
-    if (!game) return res.status(404).json({ error: "Game not found." });
-
-    const prompt = `Provide detailed information about the game titled "${game.title}". Description: ${game.description}`;
-    const llmResponse = await queryLLM(prompt);
-
-    res.json({ response: llmResponse });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to process the request." });
-  }
-});
+// Import endpoints
+router.post("/import/json", importGamesFromJSON);
+router.post("/import/csv", importGamesFromCSV);
+router.post("/import/steamdb", bulkImportSteamDBData);
 
 export default router;
