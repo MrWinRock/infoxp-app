@@ -15,9 +15,9 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "dev": "bun --watch src/app.ts",
-    "build": "bun build src/app.ts --outdir dist",
-    "start": "bun dist/app.js",
+    "dev": "bun --watch src/index.ts",
+    "build": "bun build src/index.ts --outdir dist",
+    "start": "bun dist/index.js",
     "scraper": "bun src/runScraper.ts",
     "import-csv": "bun src/scripts/importCSV.ts"
   },
