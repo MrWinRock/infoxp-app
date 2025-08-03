@@ -137,6 +137,10 @@ const scrapeIndividualGamePage = async (
   return details;
 };
 
+const generateSteamImageUrl = (steamAppId: number): string => {
+  return `https://cdn.akamai.steamstatic.com/steam/apps/${steamAppId}/header.jpg`;
+};
+
 const scrapeSteamDBChartsPage = async (browser: Browser): Promise<void> => {
   let page: Page | null = null;
   console.log(`Scraping SteamDB charts page: ${STEAMDB_CHARTS_URL}`);
@@ -327,8 +331,7 @@ const scrapeSteamDBChartsPage = async (browser: Browser): Promise<void> => {
     const waitForSelectorTimeout = 60000; // 1 minute timeout for selector
     try {
       console.log(
-        `Attempting to find selector: \\"${gameRowsSelector}\\". Waiting up to ${
-          waitForSelectorTimeout / 1000
+        `Attempting to find selector: \\"${gameRowsSelector}\\". Waiting up to ${waitForSelectorTimeout / 1000
         } seconds for it to become visible...`
       );
       // Timeout for waitForSelector after the dedicated manual intervention pause
@@ -476,6 +479,7 @@ const scrapeSteamDBChartsPage = async (browser: Browser): Promise<void> => {
           description: gameDetails.description,
           release_date: gameDetails.releaseDate,
           genre: gameDetails.genres || [],
+          image_url: `${chartGame.title.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '_')}_${chartGame.steamAppId}.jpg`
         };
 
         const updatedGame = await Game.findOneAndUpdate(
@@ -484,7 +488,7 @@ const scrapeSteamDBChartsPage = async (browser: Browser): Promise<void> => {
           { upsert: true, new: true, setDefaultsOnInsert: true }
         );
         console.log(
-          `Saved/Updated from charts: ${updatedGame.title} (AppID: ${updatedGame.steam_app_id})`
+          `Saved/Updated from charts: ${updatedGame.title} (AppID: ${updatedGame.steam_app_id}) - Image: ${updatedGame.image_url}`
         );
         gamesProcessed++;
       } catch (dbError) {

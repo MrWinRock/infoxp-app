@@ -50,8 +50,8 @@ export const createGame = async (req: Request, res: Response) => {
     try {
         const gameData = req.body;
 
-        if (gameData.genres) {
-            gameData.genres = filterValidGenres(gameData.genres);
+        if (gameData.genre) {
+            gameData.genre = filterValidGenres(gameData.genre);
         }
 
         const newGame = new Game(gameData);
@@ -72,8 +72,8 @@ export const updateGame = async (req: Request, res: Response) => {
         const { id } = req.params;
         const updateData = req.body;
 
-        if (updateData.genres) {
-            updateData.genres = filterValidGenres(updateData.genres);
+        if (updateData.genre) {
+            updateData.genre = filterValidGenres(updateData.genre);
         }
 
         const updatedGame = await Game.findByIdAndUpdate(
@@ -346,6 +346,69 @@ export const getTopGames = async (req: Request, res: Response) => {
     }
 };
 
+export const importFromCSVFile = async (req: Request, res: Response) => {
+    try {
+        const { filePath } = req.body;
+
+        if (!filePath) {
+            return res.status(400).json({
+                error: "File path is required"
+            });
+        }
+
+        const importService = new DataImportService();
+        const results = await importService.importFromCSVFile(filePath);
+
+        res.json({
+            message: "CSV file import completed",
+            results: {
+                successful: results.success,
+                duplicates: results.duplicates,
+                errors: results.errors.length,
+                errorDetails: results.errors
+            }
+        });
+    } catch (error) {
+        console.error('CSV file import error:', error);
+        res.status(500).json({
+            error: "Failed to import CSV file",
+            details: error instanceof Error ? error.message : "Unknown error"
+        });
+    }
+};
+
+// Enhanced bulk import for your custom CSV data
+export const bulkImportCustomCSV = async (req: Request, res: Response) => {
+    try {
+        const { csvContent } = req.body;
+
+        if (!csvContent) {
+            return res.status(400).json({
+                error: "CSV content is required"
+            });
+        }
+
+        const importService = new DataImportService();
+        const results = await importService.importFromCSV(csvContent);
+
+        res.json({
+            message: "Custom CSV import completed",
+            results: {
+                successful: results.success,
+                duplicates: results.duplicates,
+                errors: results.errors.length,
+                errorDetails: results.errors
+            }
+        });
+    } catch (error) {
+        console.error('Custom CSV import error:', error);
+        res.status(500).json({
+            error: "Failed to import custom CSV",
+            details: error instanceof Error ? error.message : "Unknown error"
+        });
+    }
+};
+
 export const importGamesFromJSON = async (req: Request, res: Response) => {
     try {
         const { games } = req.body;
@@ -409,53 +472,135 @@ export const importGamesFromCSV = async (req: Request, res: Response) => {
     }
 };
 
-export const bulkImportSteamDBData = async (req: Request, res: Response) => {
+export const updateGameImage = async (req: Request, res: Response) => {
     try {
-        const { games } = req.body;
+        const { id } = req.params;
+        const { image_url } = req.body;
 
-        if (!Array.isArray(games)) {
+        if (!image_url) {
             return res.status(400).json({
-                error: "Expected array of game objects"
+                error: "image_url is required"
             });
         }
 
-        // Transform SteamDB format to our format
-        const transformedGames = games.map(game => ({
-            title: game.title || game.name,
-            appId: game.steamAppId || game.appId || game.steam_app_id,
-            developer: game.developer,
-            publisher: game.publisher,
-            technologies: Array.isArray(game.technologies)
-                ? game.technologies.join(', ')
-                : game.technologies,
-            releaseDate: game.releaseDate || game.release_date,
-            description: game.description,
-            genres: Array.isArray(game.genres)
-                ? game.genres.join(', ')
-                : game.genres,
-            rating: game.rating,
-            reviewCount: game.reviewCount || game.reviews,
-            currentPlayers: game.currentPlayers || game.players
-        }));
+        const updatedGame = await Game.findByIdAndUpdate(
+            id,
+            { $set: { image_url } },
+            { new: true, runValidators: true }
+        );
 
-        const importService = new DataImportService();
-        const results = await importService.importFromJSON(transformedGames);
+        if (!updatedGame) {
+            return res.status(404).json({ error: "Game not found." });
+        }
 
         res.json({
-            message: "SteamDB bulk import completed",
-            results: {
-                totalProcessed: games.length,
-                successful: results.success,
-                duplicates: results.duplicates,
-                errors: results.errors.length,
-                errorDetails: results.errors.slice(0, 10) // Limit error details to first 10 for brevity
-            }
+            message: "Game image updated successfully",
+            game: updatedGame
         });
     } catch (error) {
-        console.error('Bulk import error:', error);
-        res.status(500).json({
-            error: "Failed to bulk import games",
-            details: error instanceof Error ? error.message : "Unknown error"
+        console.error('Update game image error:', error);
+        res.status(400).json({ error: "Failed to update game image." });
+    }
+};
+
+export const getGamesWithoutImages = async (req: Request, res: Response) => {
+    try {
+        const gamesWithoutImages = await Game.find({
+            $or: [
+                { image_url: { $exists: false } },
+                { image_url: null },
+                { image_url: "" }
+            ]
+        }).select('title steam_app_id developer publisher');
+
+        res.json({
+            games: gamesWithoutImages,
+            count: gamesWithoutImages.length
         });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to fetch games without images." });
+    }
+};
+
+export const bulkUpdateImages = async (req: Request, res: Response) => {
+    try {
+        const { updates } = req.body;
+
+        if (!Array.isArray(updates)) {
+            return res.status(400).json({
+                error: "Expected array of update objects with steam_app_id and image_url"
+            });
+        }
+
+        const results = {
+            updated: 0,
+            errors: [] as Array<{ steam_app_id: number; error: string }>
+        };
+
+        for (const update of updates) {
+            try {
+                const result = await Game.findOneAndUpdate(
+                    { steam_app_id: update.steam_app_id },
+                    { $set: { image_url: update.image_url } },
+                    { new: true, runValidators: true }
+                );
+
+                if (result) {
+                    results.updated++;
+                } else {
+                    results.errors.push({
+                        steam_app_id: update.steam_app_id,
+                        error: "Game not found"
+                    });
+                }
+            } catch (error) {
+                results.errors.push({
+                    steam_app_id: update.steam_app_id,
+                    error: error instanceof Error ? error.message : "Unknown error"
+                });
+            }
+        }
+
+        res.json({
+            message: "Bulk image update completed",
+            results
+        });
+    } catch (error) {
+        console.error('Bulk image update error:', error);
+        res.status(500).json({ error: "Failed to bulk update images." });
+    }
+};
+
+export const getGamesByDeveloper = async (req: Request, res: Response) => {
+    try {
+        const { developer } = req.params;
+
+        const games = await Game.find({
+            developer: { $in: [new RegExp(developer, 'i')] }
+        });
+
+        res.json({
+            developer,
+            games,
+            count: games.length
+        });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to fetch games by developer." });
+    }
+};
+
+// Add missing getAvailableDevelopers function
+export const getAvailableDevelopers = async (req: Request, res: Response) => {
+    try {
+        const developers = await Game.distinct('developer');
+        const flatDevelopers = developers.flat().filter(Boolean);
+        const uniqueDevelopers = [...new Set(flatDevelopers)].sort();
+
+        res.json({
+            developers: uniqueDevelopers,
+            count: uniqueDevelopers.length
+        });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to fetch developers." });
     }
 };
