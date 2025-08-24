@@ -14,12 +14,20 @@ export const handleChatMessage = async (req: Request, res: Response) => {
 
   try {
     if (!userId) {
-      const guestUser = new User({
-        name: `Guest_${new mongoose.Types.ObjectId().toHexString()}`,
-        email: undefined,
-      });
-      await guestUser.save();
-      userId = guestUser._id;
+      let guestUser = await User.findOne({ role: "guest" });
+      if (!guestUser) {
+        guestUser = new User({ name: "Guest", role: "guest" });
+        try {
+          await guestUser.save();
+        } catch (e: any) {
+          if (e?.code === 11000) {
+            guestUser = await User.findOne({ role: "guest" }); ``
+          } else {
+            throw e;
+          }
+        }
+      }
+      userId = guestUser!._id;
     }
 
     let chatSession = await ChatSession.findOne({
@@ -47,9 +55,21 @@ export const handleChatMessage = async (req: Request, res: Response) => {
     res.setHeader("Transfer-Encoding", "chunked");
 
     let accumulatedResponse = "";
+
+    if (!(botResponseStream as any).on) {
+      res.write("LLM response error.\n");
+      accumulatedResponse += "LLM response error.";
+      const botMessage = new ChatMessage({
+        chat_session_id: chatSession._id,
+        sender: "chatbot",
+        message: accumulatedResponse,
+      });
+      await botMessage.save();
+      return res.end();
+    }
+
     botResponseStream.on("data", (chunk: Buffer) => {
       const chunkStr = chunk.toString();
-      // Ollama sends a stream of JSON objects, separated by newlines.
       const parts = chunkStr.split("\n").filter((s) => s.trim() !== "");
       for (const part of parts) {
         try {
