@@ -4,9 +4,11 @@ import ChatMessage from "../models/chatMessageModel";
 import { queryLLM } from "../services/llmService";
 import mongoose from "mongoose";
 import User from "../models/userModel";
+import { getMcpClient } from "../mcp/mcpClient";
 
 export const handleChatMessage = async (req: Request, res: Response) => {
-  let { userId, message } = req.body;
+
+  let { userId, message, toolName, toolArgs } = req.body;
 
   if (!message) {
     return res.status(400).json({ error: "Missing required fields" });
@@ -21,7 +23,7 @@ export const handleChatMessage = async (req: Request, res: Response) => {
           await guestUser.save();
         } catch (e: any) {
           if (e?.code === 11000) {
-            guestUser = await User.findOne({ role: "guest" }); ``
+            guestUser = await User.findOne({ role: "guest" });
           } else {
             throw e;
           }
@@ -49,7 +51,43 @@ export const handleChatMessage = async (req: Request, res: Response) => {
     });
     await userMessage.save();
 
-    const botResponseStream = await queryLLM(message);
+    let augmentedPrompt = message;
+    if (toolName) {
+      try {
+        const mcp = await getMcpClient();
+        const toolResult = await mcp.callTool({
+          name: toolName,
+          arguments: toolArgs || {}
+        });
+        const toolJson = JSON.stringify(toolResult, null, 2);
+        augmentedPrompt =
+          `You have access to tool outputs. Incorporate them helpfully.
+
+Tool (${toolName}) returned:
+${toolJson}
+
+User message:
+${message}`;
+        await new ChatMessage({
+          chat_session_id: chatSession._id,
+          sender: "tool",
+          message: `[${toolName}] ${toolJson}`
+        }).save();
+      } catch (e) {
+        console.error("MCP tool invocation failed:", e);
+        augmentedPrompt =
+          `Tool (${toolName}) failed (proceed without tool data).
+User message:
+${message}`;
+        await new ChatMessage({
+          chat_session_id: chatSession._id,
+          sender: "tool",
+          message: `[${toolName}] ERROR: ${(e as Error).message}`
+        }).save();
+      }
+    }
+
+    const botResponseStream = await queryLLM(augmentedPrompt);
 
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
     res.setHeader("Transfer-Encoding", "chunked");
@@ -78,8 +116,8 @@ export const handleChatMessage = async (req: Request, res: Response) => {
             res.write(parsed.response);
             accumulatedResponse += parsed.response;
           }
-        } catch (e) {
-          console.error("Failed to parse stream chunk", part, e);
+        } catch {
+          // Ignore non‑JSON
         }
       }
     });

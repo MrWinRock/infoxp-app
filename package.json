@@ -16,12 +16,17 @@
   "main": "src/index.ts",
   "scripts": {
     "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
     "build": "bun build src/index.ts --outdir dist",
-    "start": "bun dist/index.js",
+    "start:prod": "bun dist/index.js",
     "scraper": "bun src/runScraper.ts",
-    "import-csv": "bun src/scripts/importCSV.ts"
+    "import-csv": "bun src/scripts/importCSV.ts",
+    "mcp:dev": "bun src/mcp/server.ts",
+    "mcp:build": "bun build src/mcp/server.ts --outdir dist/mcp",
+    "mcp:start": "node dist/mcp/server.js"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.4",
     "@types/compression": "^1.8.1",
     "axios": "^1.9.0",
     "bcrypt": "^6.0.0",
@@ -35,11 +40,12 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.15.0",
-    "mongoose": "^8.17.1",
+    "mongoose": "^8.18.0",
     "morgan": "^1.10.1",
     "puppeteer": "^24.10.0",
     "puppeteer-extra": "^3.3.6",
-    "puppeteer-extra-plugin-stealth": "^2.11.2"
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",

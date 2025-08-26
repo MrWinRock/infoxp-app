@@ -6,7 +6,7 @@ export const queryLLM = async (prompt: string): Promise<NodeJS.ReadableStream> =
     const response = await axios.post(
       "http://localhost:11434/api/generate",
       {
-        model: "llama3",
+        model: "llama3.2",
         prompt,
         stream: true,
       },

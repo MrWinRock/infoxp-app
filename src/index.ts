@@ -9,6 +9,7 @@ import { connectToDatabase } from "./config/database";
 import userRoutes from "./routes/userRoutes";
 import gameRoutes from "./routes/gameRoutes";
 import chatRoutes from "./routes/chatRoutes";
+import { agent } from "./routes/agentRoutes";
 
 dotenv.config();
 
@@ -50,6 +51,7 @@ app.get("/readyz", (_req, res) => {
 app.use("/api/users", userRoutes);
 app.use("/api/games", gameRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/agent", agent);
 
 // Root convenience
 app.get("/", (_req, res) => res.json({ service: "api", status: "ok", ready }));
