@@ -413,9 +413,9 @@ export const importGamesFromJSON = async (req: Request, res: Response) => {
     try {
         const { games } = req.body;
 
-        if (!Array.isArray(games)) {
+        if (!games) {
             return res.status(400).json({
-                error: "Request body must contain a 'games' array"
+                error: "No data provided or invalid format. Expected an array of game objects."
             });
         }
 

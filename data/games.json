@@ -1,0 +1,467 @@
+[
+    {
+        "title": "Counter Strike 2",
+        "steamAppId": 730,
+        "genre": [
+            "FPS",
+            "SHOOTER",
+            "MULTIPLAYER",
+            "COMPETITIVE"
+        ],
+        "developer": "Valve",
+        "publisher": "Valve",
+        "technologies": "Source2 Engine",
+        "releaseDate": "21 August 2012",
+        "description": "For over two decades, Counter-Strike has offered an elite competitive experience, one shaped by millions of players from across the globe. And now the next chapter in the CS story is about to begin. This is Counter-Strike 2.",
+        "imageUrl": "cs2.jpg"
+    },
+    {
+        "title": "Dota 2",
+        "steamAppId": 570,
+        "genre": [
+            "Free to Play",
+            "MOBA",
+            "Multiplayer"
+        ],
+        "developer": "Valve",
+        "publisher": "Valve",
+        "technologies": "Source2 Engine",
+        "releaseDate": "9 July 2013",
+        "description": "Every day, millions of players worldwide enter battle as one of over a hundred Dota heroes. And no matter if it's their 10th hour of play or 1,000th, there's always something new to discover. With regular updates that ensure a constant evolution of gameplay, features, and heroes, Dota 2 has taken on a life of its own.",
+        "imageUrl": "dota2.jpg"
+    },
+    {
+        "title": "PUBG",
+        "steamAppId": 578080,
+        "genre": [
+            "Survival",
+            "Shooter",
+            "Battle Royale"
+        ],
+        "developer": "PUBG Corporation",
+        "publisher": "KRAFTON, Inc.",
+        "technologies": "BattlEye AntiCheat, Unreal Engine, EpicOnlineServices SDK",
+        "releaseDate": "21 December 2017",
+        "description": "PUBG: BATTLEGROUNDS, the high-stakes winner-take-all shooter that started the Battle Royale craze, is free-to-play! Drop into diverse maps, loot unique weapons and supplies, and survive in an ever-shrinking zone where every turn could be your last.",
+        "imageUrl": "pubg.jpg"
+    },
+    {
+        "title": "Black Myth: Wukong",
+        "steamAppId": 2358720,
+        "genre": [
+            "Mythology",
+            "Action RPG",
+            "Action",
+            "Souls-like",
+            "RPG"
+        ],
+        "developer": "Game Science",
+        "publisher": "Game Science",
+        "technologies": "Unreal Engine",
+        "releaseDate": "20 August 2024",
+        "description": "Black Myth: Wukong is an action RPG rooted in Chinese mythology. You shall set out as the Destined One to venture into the challenges and marvels ahead, to uncover the obscured truth beneath the veil of a glorious legend from the past.",
+        "imageUrl": "blackmyth.jpg"
+    },
+    {
+        "title": "Palworld",
+        "steamAppId": 1623730,
+        "genre": [
+            "Open World",
+            "Survival",
+            "Creature Collector",
+            "Multiplayer",
+            "Open World Survival Craft"
+        ],
+        "developer": "Pocketpair",
+        "publisher": "Pocketpair",
+        "technologies": "Unreal Engine, EpicOnlineServices SDK",
+        "releaseDate": "19 January 2024",
+        "description": "Fight, farm, build and work alongside mysterious creatures called \"Pals\" in this completely new multiplayer, open world survival and crafting game!",
+        "imageUrl": "palworld.jpg"
+    },
+    {
+        "title": "Monster Hunter Wilds",
+        "steamAppId": 2246340,
+        "genre": [
+            "Hunting",
+            "Action",
+            "Multiplayer",
+            "Online Co-Op",
+            "Co-op"
+        ],
+        "developer": "CAPCOM Co., Ltd.",
+        "publisher": "CAPCOM Co., Ltd.",
+        "technologies": "RE_Engine Engine",
+        "releaseDate": "28 February 2025",
+        "description": "The unbridled force of nature runs wild and relentless, with environments transforming drastically from one moment to the next. This is a story of monsters and humans and their struggles to live in harmony in a world of duality.",
+        "imageUrl": "mhw.jpg"
+    },
+    {
+        "title": "Lost Ark",
+        "steamAppId": 1599340,
+        "genre": [
+            "MMORPG",
+            "Free to Play",
+            "Action RPG",
+            "Multiplayer",
+            "Hack and Slash"
+        ],
+        "developer": "Smilegate RPG",
+        "publisher": "Amazon Games",
+        "technologies": "AnyBrain AntiCheat, EasyAntiCheat AntiCheat, UbiArtFramework Engine, Unreal Engine, EpicOnlineServices SDK",
+        "releaseDate": "11 February 2022",
+        "description": "Embark on an odyssey for the Lost Ark in a vast, vibrant world: explore new lands, seek out lost treasures, and test yourself in thrilling action combat in this action-packed free-to-play RPG.",
+        "imageUrl": "lostark.jpg"
+    },
+    {
+        "title": "Cyberpunk 2077",
+        "steamAppId": 1091500,
+        "genre": [
+            "Cyberpunk",
+            "Open World",
+            "Nudity",
+            "RPG",
+            "Singleplayer"
+        ],
+        "developer": "CD PROJEKT RED",
+        "publisher": "CD PROJEKT RED",
+        "technologies": "REDengine Engine",
+        "releaseDate": "10 December 2020",
+        "description": "Cyberpunk 2077 is an open-world, action-adventure RPG set in the dark future of Night City — a dangerous megalopolis obsessed with power, glamor, and ceaseless body modification.",
+        "imageUrl": "cyberpunk2077.jpg"
+    },
+    {
+        "title": "ELDEN RING",
+        "steamAppId": 1245620,
+        "genre": [
+            "Souls-like",
+            "Open World",
+            "Dark Fantasy",
+            "RPG",
+            "Difficult"
+        ],
+        "developer": "FromSoftware, Inc.",
+        "publisher": "FromSoftware, Inc., Bandai Namco Entertainment",
+        "technologies": "EasyAntiCheat AntiCheat, EpicOnlineServices SDK",
+        "releaseDate": "24 February 2022",
+        "description": "THE CRITICALLY ACCLAIMED FANTASY ACTION RPG. Rise, Tarnished, and be guided by grace to brandish the power of the Elden Ring and become an Elden Lord in the Lands Between.",
+        "imageUrl": "eldenring.jpg"
+    },
+    {
+        "title": "Banana",
+        "steamAppId": 2923300,
+        "genre": [
+            "Free to Play",
+            "Clicker",
+            "Singleplayer",
+            "2D",
+            "Casual"
+        ],
+        "developer": "Sky, AestheticSpartan, O'Brian",
+        "publisher": "Sky",
+        "technologies": "Unity Engine",
+        "releaseDate": "23 April 2024",
+        "description": "Banana is a clicker Game, in which you click a Banana! In Banana you click the Banana to gain even more Bananas! Every 3 hours, you get dropped a banana. Each banana is also made by the community in discord. Come hang out with us and let's grow into something awesome !",
+        "imageUrl": "banana.jpg"
+    },
+    {
+        "title": "Hogwarts Legacy",
+        "steamAppId": 990080,
+        "genre": [
+            "Magic",
+            "Open World",
+            "Fantasy",
+            "Singleplayer",
+            "Adventure"
+        ],
+        "developer": "Avalanche Software",
+        "publisher": "Warner Bros. Games",
+        "technologies": "Unreal Engine, EpicOnlineServices SDK",
+        "releaseDate": "10 February 2023",
+        "description": "Hogwarts Legacy is an immersive, open-world action RPG. Now you can take control of the action and be at the center of your own adventure in the wizarding world.",
+        "imageUrl": "hogwarts.jpg"
+    },
+    {
+        "title": "Baldur's Gate 3",
+        "steamAppId": 1086940,
+        "genre": [
+            "RPG",
+            "Character Customization",
+            "Choices Matter",
+            "Story Rich",
+            "Turn-Based Combat"
+        ],
+        "developer": "Larian Studios",
+        "publisher": "Larian Studios",
+        "technologies": "Divinity_Engine Engine",
+        "releaseDate": "3 August 2023",
+        "description": "Baldur's Gate 3 is a story-rich, party-based RPG set in the universe of Dungeons & Dragons, where your choices shape a tale of fellowship and betrayal, survival and sacrifice, and the lure of absolute power.",
+        "imageUrl": "bg3.jpg"
+    },
+    {
+        "title": "Goose Goose Duck",
+        "steamAppId": 1568590,
+        "genre": [
+            "Multiplayer",
+            "Free to Play",
+            "Online Co-Op",
+            "Social Deduction",
+            "2D"
+        ],
+        "developer": "Gaggle Studios, Inc.",
+        "publisher": "Gaggle Studios, Inc.",
+        "technologies": "EasyAntiCheat AntiCheat, Unity Engine, EpicOnlineServices SDK",
+        "releaseDate": "3 October 2021",
+        "description": "Goose Goose Duck is a game of social deduction for up to 16 players. Players are separated into different groups that are each assigned a different objective. Complete your team's objective to win!",
+        "imageUrl": "ggd.jpg"
+    },
+    {
+        "title": "Marvel Rivals",
+        "steamAppId": 2767030,
+        "genre": [
+            "Free to Play",
+            "Multiplayer",
+            "Hero Shooter",
+            "Third-Person Shooter",
+            "Superhero"
+        ],
+        "developer": "NetEase Games",
+        "publisher": "NetEase Games",
+        "technologies": "Unreal Engine, EpicOnlineServices SDK",
+        "releaseDate": "6 December 2024",
+        "description": "Marvel Rivals is a Super Hero Team-Based PVP Shooter! Assemble an all-star Marvel squad, devise countless strategies by combining powers to form unique Team-Up skills and fight in destructible, ever-changing battlefields across the continually evolving Marvel universe!",
+        "imageUrl": "marvel_rivals.jpg"
+    },
+    {
+        "title": "Apex Legends",
+        "steamAppId": 1172470,
+        "genre": [
+            "Free to Play",
+            "Battle Royale",
+            "Multiplayer",
+            "FPS",
+            "Shooter"
+        ],
+        "developer": "Respawn",
+        "publisher": "Electronic Arts",
+        "technologies": "EasyAntiCheat AntiCheat, EpicOnlineServices SDK",
+        "releaseDate": "5 November 2020",
+        "description": "Apex Legends is the award-winning, free-to-play Hero Shooter from Respawn Entertainment. Master an ever-growing roster of legendary characters with powerful abilities, and experience strategic squad play and innovative gameplay in the next evolution of Hero Shooter and Battle Royale.",
+        "imageUrl": "apex_legends.jpg"
+    },
+    {
+        "title": "Path of Exile 2",
+        "steamAppId": 2694490,
+        "genre": [
+            "Action RPG",
+            "Hack and Slash",
+            "RPG",
+            "Souls-like",
+            "MMORPG"
+        ],
+        "developer": "Grinding Gear Games",
+        "publisher": "Grinding Gear Games",
+        "technologies": "",
+        "releaseDate": "6 December 2024",
+        "description": "Path of Exile 2 is a next generation Action RPG from Grinding Gear Games, featuring co-op for up to six players. Set years after the original Path of Exile, you will return to the dark world of Wraeclast and seek to end the corruption that is spreading.",
+        "imageUrl": "poe2.jpg"
+    },
+    {
+        "title": "Valheim",
+        "steamAppId": 892970,
+        "genre": [
+            "Open World Survival Craft",
+            "Survival",
+            "Online Co-Op",
+            "Open World",
+            "Multiplayer"
+        ],
+        "developer": "Iron Gate AB",
+        "publisher": "Coffee Stain Publishing",
+        "technologies": "Unity Engine",
+        "releaseDate": "2 February 2021",
+        "description": "A brutal exploration and survival game for 1-10 players, set in a procedurally-generated purgatory inspired by viking culture. Battle, build, and conquer your way to a saga worthy of Odin's patronage!",
+        "imageUrl": "valheim.jpg"
+    },
+    {
+        "title": "Call of Duty®",
+        "steamAppId": 1938090,
+        "genre": [
+            "FPS",
+            "Multiplayer",
+            "Shooter",
+            "Singleplayer",
+            "Action"
+        ],
+        "developer": "Treyarch, Raven Software, Beenox, High Moon Studios, Activision Shanghai, Sledgehammer Games, Infinity Ward, Demonware, Toys for Bob",
+        "publisher": "Activision",
+        "technologies": "Ricochet AntiCheat, IW_Engine Engine",
+        "releaseDate": "28 October 2022",
+        "description": "The Call of Duty® experience supports Call of Duty®: Black Ops 6, Call of Duty®: Modern Warfare® III, Call of Duty®: Modern Warfare® II and Call of Duty®: Warzone™.",
+        "imageUrl": "cod.jpg"
+    },
+    {
+        "title": "Terraria",
+        "steamAppId": 105600,
+        "genre": [
+            "Open World Survival Craft",
+            "Sandbox",
+            "Survival",
+            "2D",
+            "Multiplayer"
+        ],
+        "developer": "Re-Logic",
+        "publisher": "Re-Logic",
+        "technologies": "FNA Engine, XNA Engine",
+        "releaseDate": "16 May 2011",
+        "description": "Dig, fight, explore, build! Nothing is impossible in this action-packed adventure game. Four Pack also available!",
+        "imageUrl": "terraria.jpg"
+    },
+    {
+        "title": "HELLDIVERS™ 2",
+        "steamAppId": 553850,
+        "genre": [
+            "Online Co-Op",
+            "PvE",
+            "Third-Person Shooter",
+            "Multiplayer",
+            "Action"
+        ],
+        "developer": "Arrowhead Game Studios",
+        "publisher": "PlayStation Publishing LLC",
+        "technologies": "nProtect_GameGuard AntiCheat, Bitsquid Engine",
+        "releaseDate": "8 February 2024",
+        "description": "The Galaxy's Last Line of Offence. Enlist in the Helldivers and join the fight for freedom across a hostile galaxy in a fast, frantic, and ferocious third-person shooter.",
+        "imageUrl": "helldivers2.jpg"
+    },
+    {
+        "title": "Among Us",
+        "steamAppId": 945360,
+        "genre": [
+            "Multiplayer",
+            "Social Deduction",
+            "Online Co-Op",
+            "Space",
+            "Survival"
+        ],
+        "developer": "Innersloth",
+        "publisher": "Innersloth",
+        "technologies": "Unity Engine, EpicOnlineServices SDK",
+        "releaseDate": "16 November 2018",
+        "description": "An online and local party game of teamwork and betrayal for 4-15 players...in space!",
+        "imageUrl": "amongus.jpg"
+    },
+    {
+        "title": "Sons Of The Forest",
+        "steamAppId": 1326470,
+        "genre": [
+            "Survival",
+            "Open World",
+            "Multiplayer",
+            "Co-op",
+            "Survival Horror"
+        ],
+        "developer": "Endnight Games Ltd",
+        "publisher": "Newnight",
+        "technologies": "Unity Engine",
+        "releaseDate": "22 February 2024",
+        "description": "Sent to find a missing billionaire on a remote island, you find yourself in a cannibal-infested hellscape. Craft, build, and struggle to survive, alone or with friends, in this terrifying new open-world survival horror simulator.",
+        "imageUrl": "sotf.jpg"
+    },
+    {
+        "title": "NARAKA: BLADEPOINT",
+        "steamAppId": 1203220,
+        "genre": [
+            "Battle Royale",
+            "Multiplayer",
+            "Martial Arts",
+            "Mature",
+            "PvP"
+        ],
+        "developer": "24 Entertainment",
+        "publisher": "NetEase Games Global",
+        "technologies": "Unity Engine",
+        "releaseDate": "12 August 2021",
+        "description": "Dive into the legends of the Far East in NARAKA: BLADEPOINT; team up with friends in fast-paced melee fights for a Battle Royale experience unlike any other. Find your playstyle with a varied cast of heroes with unique skills. More than 20 million players have already joined the fray, play free now!",
+        "imageUrl": "naraka.jpg"
+    },
+    {
+        "title": "Grand Theft Auto V Legacy",
+        "steamAppId": 271590,
+        "genre": [
+            "Open World",
+            "Action",
+            "Multiplayer",
+            "Crime",
+            "Automobile Sim"
+        ],
+        "developer": "Rockstar North",
+        "publisher": "Rockstar Games",
+        "technologies": "BattlEye AntiCheat, RAGE Engine, Rockstar Launcher",
+        "releaseDate": "13 April 2015",
+        "description": "Grand Theft Auto V for PC offers players the option to explore the award-winning world of Los Santos and Blaine County in resolutions of up to 4k and beyond, as well as the chance to experience the game running at 60 frames per second.",
+        "imageUrl": "gtavl.jpg"
+    },
+    {
+        "title": "Grand Theft Auto V Enhanced",
+        "steamAppId": 3240220,
+        "genre": [
+            "Open World",
+            "Action",
+            "Multiplayer",
+            "Crime",
+            "Mature"
+        ],
+        "developer": "Rockstar North",
+        "publisher": "Rockstar Games",
+        "technologies": "BattlEye AntiCheat, RAGE Engine, Rockstar Launcher",
+        "releaseDate": "4 March 2025",
+        "description": "Experience entertainment blockbusters Grand Theft Auto V and Grand Theft Auto Online — now upgraded for a new generation with stunning visuals, faster loading, 3D audio, and more, plus exclusive content for GTA Online players.",
+        "imageUrl": "gtave.jpg"
+    },
+    {
+        "title": "HITMAN™ 2",
+        "steamAppId": 863550,
+        "genre": [
+            "Stealth",
+            "Assassin",
+            "Action",
+            "Singleplayer",
+            "Third Person"
+        ],
+        "developer": "IO Interactive A/S",
+        "publisher": "IO Interactive A/S",
+        "technologies": "Glacier Engine",
+        "releaseDate": "13 November 2018",
+        "description": "Travel the globe and track your targets across exotic sandbox locations in HITMAN™ 2. From sun-drenched streets to dark and dangerous rainforests, nowhere is safe from the world's most creative assassin, Agent 47 in the ultimate spy thriller story.",
+        "imageUrl": "hitman2.jpg"
+    },
+    {
+        "title": "Monster Hunter: World",
+        "steamAppId": 582010,
+        "genre": [
+            "Co-op",
+            "Multiplayer",
+            "Action",
+            "Open World",
+            "RPG"
+        ],
+        "developer": "CAPCOM Co., Ltd.",
+        "publisher": "CAPCOM Co., Ltd.",
+        "technologies": "MT Framework",
+        "releaseDate": "9 August 2018",
+        "description": "Welcome to a new world! In Monster Hunter: World, the latest installment in the series, you can enjoy the ultimate hunting experience, using everything at your disposal to hunt monsters in a new world teeming with surprises and excitement.",
+        "imageUrl": "mhworld.jpg"
+    },
+    {
+        "title": "Starfield",
+        "steamAppId": 1716740,
+        "genre": [],
+        "developer": "Bethesda Game Studios",
+        "publisher": "Bethesda Game Studios",
+        "technologies": "Creation Engine 2",
+        "releaseDate": "6 September 2023",
+        "description": "Starfield is the first new universe in 25 years from Bethesda Game Studios, the award-winning creators of The Elder Scrolls V: Skyrim and Fallout 4.",
+        "imageUrl": "starfield.jpg"
+    }
+]
