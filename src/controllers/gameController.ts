@@ -413,19 +413,34 @@ export const importGamesFromJSON = async (req: Request, res: Response) => {
     try {
         const { games } = req.body;
 
-        if (!games) {
+        console.log('Importing games from JSON:', games);
+
+        if (!Array.isArray(games)) {
             return res.status(400).json({
-                error: "No data provided or invalid format. Expected an array of game objects."
+                error: "Request body must contain a 'games' array"
             });
         }
 
+        const normalized = games.map((g: any) => ({
+            title: g.title,
+            steam_app_id: g.steamAppId != null ? String(g.steamAppId) : undefined,
+            genre: Array.isArray(g.genre) ? g.genre.join(', ') : g.genre,
+            developer: Array.isArray(g.developer) ? g.developer.join(', ') : g.developer,
+            publisher: g.publisher,
+            technologies: Array.isArray(g.technologies) ? g.technologies.join(', ') : g.technologies,
+            release_date: g.releaseDate,
+            description: g.description,
+            image_url: g.imageUrl
+        })).filter((g: any) => !!g.title);
+
         const importService = new DataImportService();
-        const results = await importService.importFromJSON(games);
+        const results = await importService.importFromJSON(normalized);
 
         res.json({
             message: "Import completed",
             results: {
-                totalProcessed: games.length,
+                totalReceived: games.length,
+                totalProcessed: normalized.length,
                 successful: results.success,
                 duplicates: results.duplicates,
                 errors: results.errors.length,

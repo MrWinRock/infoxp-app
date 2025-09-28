@@ -79,8 +79,11 @@ export class DataImportService {
             .filter(Boolean);
     }
 
-    private parseGenres(genresStr: string): GameGenre[] {
+    private parseGenres(genresStr: string | string[]): GameGenre[] {
         if (!genresStr) return [];
+        if (Array.isArray(genresStr)) {
+            genresStr = genresStr.join(', ');
+        }
 
         // Remove quotes and split by comma
         const cleanGenres = genresStr.replace(/^"|"$/g, '');
@@ -89,14 +92,10 @@ export class DataImportService {
 
         rawGenres.forEach(genre => {
             const upperGenre = genre.toUpperCase().replace(/\s+/g, '_');
-
-            // Try direct mapping first
             const mapped = GENRE_MAPPING[upperGenre];
             if (mapped && !mappedGenres.includes(mapped)) {
                 mappedGenres.push(mapped);
-            }
-            // Try original case
-            else if (GENRE_MAPPING[genre] && !mappedGenres.includes(GENRE_MAPPING[genre]!)) {
+            } else if (GENRE_MAPPING[genre] && !mappedGenres.includes(GENRE_MAPPING[genre]!)) {
                 mappedGenres.push(GENRE_MAPPING[genre]!);
             }
         });
