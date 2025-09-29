@@ -43,14 +43,16 @@ export const createUser = async (req: Request, res: Response) => {
     const token = generateToken({
       id: newUser._id.toString(),
       email: newUser.email,
-      name: newUser.name
+      name: newUser.name,
+      role: newUser.role
     });
 
     const userResponse = {
       id: newUser._id,
       name: newUser.name,
       email: newUser.email,
-      date_of_birth: newUser.date_of_birth
+      date_of_birth: newUser.date_of_birth,
+      role: newUser.role
     };
 
     res.status(201).json({
@@ -91,7 +93,8 @@ export const loginUser = async (req: Request, res: Response) => {
     const token = generateToken({
       id: user._id.toString(),
       email: user.email,
-      name: user.name
+      name: user.name,
+      role: user.role
     });
 
     const userResponse = {
@@ -141,7 +144,8 @@ export const getProfile = async (req: AuthenticatedRequest, res: Response) => {
       id: user._id,
       name: user.name,
       email: user.email,
-      date_of_birth: user.date_of_birth
+      date_of_birth: user.date_of_birth,
+      role: user.role
     };
 
     res.status(200).json({
@@ -187,5 +191,29 @@ export const updatePassword = async (req: Request, res: Response) => {
     res.status(200).json({ message: "Password updated successfully" });
   } catch (error) {
     res.status(500).json({ message: "Failed to update password", error });
+  }
+};
+
+export const promoteUserToAdmin = async (req: Request, res: Response) => {
+  try {
+    const { email, id } = req.body;
+
+    if (!email && !id) {
+      return res.status(400).json({ message: "User email or ID is required" });
+    }
+
+    const user = await User.findOne(email ? { email } : { _id: id });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    user.role = "admin";
+    await user.save();
+
+    res.status(200).json({ message: `User ${user.name} has been promoted to admin.` });
+
+  } catch (error) {
+    res.status(500).json({ message: "Failed to promote user", error });
   }
 };

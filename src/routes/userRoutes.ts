@@ -5,7 +5,8 @@ import {
     loginUser,
     getUserById,
     getProfile,
-    updatePassword
+    updatePassword,
+    promoteUserToAdmin
 } from "../controllers/userController";
 import { authenticateToken } from "../middlewares/authMiddleware";
 
@@ -18,5 +19,7 @@ router.post("/login", loginUser);
 
 router.get("/profile/me", authenticateToken, getProfile);
 router.put("/:id/password", authenticateToken, updatePassword);
+
+router.put("/:id/promote", authenticateToken, promoteUserToAdmin);
 
 export default router;

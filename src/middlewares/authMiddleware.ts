@@ -6,6 +6,7 @@ export interface AuthenticatedRequest extends Request {
         id: string;
         email?: string;
         name?: string;
+        role?: "admin" | "user";
     };
 }
 
@@ -31,6 +32,17 @@ export const authenticateToken = (
     }
 
     req.user = decoded;
+    next();
+};
+
+export const isAdmin = (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+) => {
+    if (req.user?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden: Admin access required" });
+    }
     next();
 };
 
