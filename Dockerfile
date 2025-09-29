@@ -39,7 +39,7 @@ EXPOSE 5000
 USER bun
 
 # Health check - test the actual health endpoint  
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+HEALTHCHECK --interval=60s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:5000/healthz || exit 1
 
 # Run directly from source (Bun supports TypeScript)
