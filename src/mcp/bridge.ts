@@ -39,5 +39,5 @@ app.post("/api/mcp/tools/call", async (req, res) => {
     }
 });
 
-const PORT = Number(process.env.PORT || 3030);
+const PORT = Number(process.env.BRIDGE_PORT || 3030);
 app.listen(PORT, () => console.log(`MCP bridge http://localhost:${PORT}`));

@@ -43,4 +43,4 @@ HEALTHCHECK --interval=60s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:5000/healthz || exit 1
 
 # Run directly from source (Bun supports TypeScript)
-CMD ["bun", "src/index.ts"]
+CMD ["bun", "src/main.ts"]
