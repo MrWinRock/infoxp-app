@@ -6,20 +6,25 @@ import {
     getUserById,
     getProfile,
     updatePassword,
-    promoteUserToAdmin
+    promoteUserToAdmin,
+    deleteUser
 } from "../controllers/userController";
-import { authenticateToken } from "../middlewares/authMiddleware";
+import { authenticateToken, isAdmin } from "../middlewares/authMiddleware";
 
 const router = express.Router();
 
-router.get("/", getUsers);
-router.get("/:id", getUserById);
+// auth routes
 router.post("/register", createUser);
 router.post("/login", loginUser);
 
+// profile routes
 router.get("/profile/me", authenticateToken, getProfile);
 router.put("/:id/password", authenticateToken, updatePassword);
 
-router.put("/:id/promote", authenticateToken, promoteUserToAdmin);
+// admin routes
+router.get("/", authenticateToken, isAdmin, getUsers);
+router.get("/:id", authenticateToken, isAdmin, getUserById);
+router.delete("/:id", authenticateToken, isAdmin, deleteUser);
+router.put("/:id/promote", authenticateToken, isAdmin, promoteUserToAdmin);
 
 export default router;
