@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import mongoose from "mongoose";
+import "dotenv/config";
 
 const MONGO_URI =
     process.env.MONGODB_URI || process.env.MONGODB_USER_URI || "";
@@ -14,6 +15,11 @@ console.log("[boot]", {
     MONGO_URI: MONGO_URI ? "(set)" : "(missing)",
     TAVILY: TAVILY_API_KEY ? "set" : "empty",
 });
+
+function toJsonStr(v: unknown, fallback = "{}") {
+    if (typeof v === "string") return v || fallback;
+    try { return JSON.stringify(v ?? {}); } catch { return fallback; }
+}
 
 let mongooseReady = false;
 
@@ -42,18 +48,24 @@ async function getCol(dbName: string, collName: string) {
 
 type SearchItem = { title: string; url: string; snippet: string };
 
-async function tavilySearch(q: string, maxResults: number, depth: "basic" | "advanced") {
-    const r = await fetch("https://api.tavily.com/search", {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-api-key": TAVILY_API_KEY },
-        body: JSON.stringify({ query: q, search_depth: depth, max_results: maxResults })
-    });
-    if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
-    const data = await r.json() as any;
-    const items: SearchItem[] = (data.results ?? []).map((x: any) => ({
-        title: x.title, url: x.url, snippet: x.content
-    }));
-    return items;
+async function tavilySearch(q: string, maxResults = 5, depth: "basic" | "advanced" = "basic") {
+    if (!TAVILY_API_KEY) return ddgFallback(q, maxResults);
+    try {
+        const r = await fetch("https://api.tavily.com/search", {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-api-key": TAVILY_API_KEY },
+            body: JSON.stringify({ query: q, search_depth: depth, max_results: maxResults })
+        });
+        if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
+        const data: any = await r.json();
+        return (data.results ?? [])
+            .slice(0, maxResults)
+            .map((x: any, i: number) => `${i + 1}. ${x.title}\n${x.url}\n${x.content}`)
+            .join("\n\n");
+    } catch (e) {
+        console.warn("[agent:web] Tavily failed, falling back:", (e as any)?.message || e);
+        return ddgFallback(q, maxResults);
+    }
 }
 
 async function ddgFallback(q: string, maxResults: number) {
@@ -71,6 +83,24 @@ async function ddgFallback(q: string, maxResults: number) {
         out.push({ title, url, snippet });
     }
     return out;
+}
+
+async function safeWebSearch(q: string, maxResults: number, depth: "basic" | "advanced") {
+    if (!TAVILY_API_KEY) {
+        console.warn("[web] Tavily key missing — falling back to DuckDuckGo");
+        return ddgFallback(q, maxResults);
+    }
+    try {
+        return await tavilySearch(q, maxResults, depth);
+    } catch (e: any) {
+        console.warn("[web] Tavily failed — falling back to DuckDuckGo:", e?.message || e);
+        try {
+            return await ddgFallback(q, maxResults);
+        } catch (e2: any) {
+            console.error("[web] DuckDuckGo fallback failed:", e2?.message || e2);
+            return [];
+        }
+    }
 }
 
 async function readWithJina(url: string) {
@@ -94,9 +124,7 @@ server.registerTool(
         },
     },
     async ({ q, maxResults, depth }) => {
-        const results: SearchItem[] = TAVILY_API_KEY
-            ? await tavilySearch(q, maxResults, depth)
-            : await ddgFallback(q, maxResults);
+        const results: SearchItem[] = await safeWebSearch(q, maxResults, depth);
 
         console.log("[tool] web_search", { q, maxResults, depth });
 
@@ -143,19 +171,18 @@ server.registerTool(
         inputSchema: {
             db: z.string(),
             collection: z.string(),
-            filter: z.string().default("{}"),
-            projection: z.string().default("{}"),
-            sort: z.string().default("{}"),
+            filter: z.any().optional(),
+            projection: z.any().optional(),
+            sort: z.any().optional(),
             limit: z.number().int().min(1).max(100).default(20),
         },
     },
     async ({ db, collection, filter, projection, sort, limit }) => {
         const col = await getCol(db, collection);
-        const docs = await col
-            .find(JSON.parse(filter), { projection: JSON.parse(projection) })
-            .sort(JSON.parse(sort))
-            .limit(limit)
-            .toArray();
+        const f = JSON.parse(toJsonStr(filter, "{}"));
+        const p = JSON.parse(toJsonStr(projection, "{}"));
+        const s = JSON.parse(toJsonStr(sort, "{}"));
+        const docs = await col.find(f, { projection: p }).sort(s).limit(limit).toArray();
         console.log("[tool] mongo_find", { db, collection, limit });
         return { content: [{ type: "text", text: JSON.stringify(docs, null, 2) }] };
     }
@@ -188,16 +215,70 @@ server.registerTool(
         inputSchema: {
             db: z.string(),
             collection: z.string(),
-            filter: z.string(),
-            update: z.string(),
+            filter: z.any(),
+            update: z.any(),
             upsert: z.boolean().default(false),
         },
     },
     async ({ db, collection, filter, update, upsert }) => {
         const col = await getCol(db, collection);
-        const res = await col.updateOne(JSON.parse(filter), JSON.parse(update), { upsert });
+        const f = JSON.parse(toJsonStr(filter, "{}"));
+        const u = JSON.parse(toJsonStr(update, "{}"));
+        const res = await col.updateOne(f, u, { upsert });
         console.log("[tool] mongo_updateOne", { db, collection, upsert });
         return { content: [{ type: "text", text: JSON.stringify(res, null, 2) }] };
+    }
+);
+
+server.registerTool(
+    "hybrid_game_context",
+    {
+        title: "Hybrid Game Context (MongoDB + Web)",
+        description: "Fetch game details from MongoDB and recent web results together.",
+        inputSchema: {
+            q: z.string().min(1),
+            db: z.string(),
+            collection: z.string(),
+            filter: z.any().optional(),
+            projection: z.any().optional(),
+            limit: z.number().int().min(1).max(20).default(1),
+            maxResults: z.number().int().min(1).max(5).default(3),
+            depth: z.enum(["basic", "advanced"]).default("basic"),
+        },
+    },
+    async ({ q, db, collection, filter, projection, limit, maxResults, depth }) => {
+        const col = await getCol(db, collection);
+        const f = JSON.parse(toJsonStr(filter, "{}"));
+        const p = JSON.parse(toJsonStr(projection, "{}"));
+
+        const [docs, web] = await Promise.all([
+            col.find(f, { projection: p }).limit(limit).toArray(),
+            safeWebSearch(q, maxResults, depth)
+        ]);
+
+        const webText = Array.isArray(web)
+            ? web.map((r: any, i: number) => `${i + 1}. ${r.title}\n${r.url}\n${r.snippet}`).join("\n\n")
+            : String(web);
+
+        const text = `[DB]
+${JSON.stringify(docs, null, 2)}
+
+[WEB]
+Query: ${q}
+${webText}`;
+
+        return {
+            content: [
+                { type: "text", text },
+                ...((Array.isArray(web) ? web : []).slice(0, maxResults).map((r: any) => ({
+                    type: "resource_link" as const,
+                    uri: r.url,
+                    name: r.title,
+                    description: r.snippet,
+                    mimeType: "text/html",
+                })))
+            ]
+        };
     }
 );
 

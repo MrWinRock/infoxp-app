@@ -17,7 +17,7 @@ const userSchema: Schema = new Schema(
     email: { type: String, unique: true, sparse: true },
     password: { type: String },
     date_of_birth: { type: Date },
-    role: { type: String, enum: ["admin", "user"], default: "user" },
+    role: { type: String, enum: ["admin", "user", "guest"], default: "user" },
   },
   { timestamps: true }
 );

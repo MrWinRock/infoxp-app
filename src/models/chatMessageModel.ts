@@ -14,7 +14,7 @@ const chatMessageSchema: Schema = new Schema(
       ref: "ChatSession",
       required: true,
     },
-    sender: { type: String, enum: ["user", "chatbot"], required: true },
+    sender: { type: String, enum: ["user", "chatbot", "tool", "system"], required: true },
     message: { type: String, required: true },
     timestamp: { type: Date, default: Date.now },
   },
