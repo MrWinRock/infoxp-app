@@ -4,11 +4,13 @@ Base URL: `/api/users`
 
 ---
 
-### Authentication
+## Authentication
 
-#### **POST** `/register`
+### **POST** `/register`
+
 Register a new user.
 **Request body:**
+
 ```json
 {
     "name": "John Doe",
@@ -18,9 +20,11 @@ Register a new user.
 }
 ```
 
-#### **POST** `/login` 
+### **POST** `/login`
+
 Authenticate user and return token.
 **Request body:**
+
 ```json
 {
     "email": "john@example.com",
@@ -30,12 +34,15 @@ Authenticate user and return token.
 
 ### Profile
 
-#### **GET** `/profile/me` 
+### **GET** `/profile/me`
+
 Get current user profile (auth required)
 
-#### **PUT** `/:id/password` 
+### **PUT** `/:id/password`
+
 Update user password (auth required)
 **Request body:**
+
 ```json
 {
     "currentPassword": "mypassword123",
@@ -43,9 +50,11 @@ Update user password (auth required)
 }
 ```
 
-#### **PUT** `/:id` 
+### **PUT** `/:id`
+
 Update user info (name, email, etc.) (auth required)
 **Request body:**
+
 ```json
 {
     "name": "Johnathan Doe",
@@ -54,9 +63,11 @@ Update user info (name, email, etc.) (auth required)
 }
 ```
 
-#### **POST** `/reset-password` 
+### **POST** `/reset-password`
+
 Reset password using token
 **Request body:**
+
 ```json
 {
     "token": "a1b2c3d4e5f6...",
@@ -66,14 +77,18 @@ Reset password using token
 
 ### Admin
 
-#### **GET** `/` 
+### **GET** `/`
+
 Get all users (admin only)
 
-#### **GET** `/:id` 
+### **GET** `/:id`
+
 Get user by ID (admin only)
 
-#### **DELETE** `/:id` 
+### **DELETE** `/:id`
+
 Delete user (admin only)
 
-#### **PUT** `/:id/promote` 
+### **PUT** `/:id/promote`
+
 Promote user to admin (admin only)

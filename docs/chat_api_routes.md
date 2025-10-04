@@ -91,16 +91,19 @@ The MCP server registers multiple tools in [src/mcp/server.ts](src/mcp/server.ts
   - Web search uses the same resilient fallback.
 
 Search fallback functions:
+
 - [`tavilySearch`](src/mcp/server.ts)
 - [`ddgFallback`](src/mcp/server.ts)
 - [`safeWebSearch`](src/mcp/server.ts)
 
 Reader helper:
+
 - [`readWithJina`](src/mcp/server.ts)
 
 ### Optional MCP Bridge (HTTP)
 
 For dev/testing without the chat pipeline:
+
 - List tools: GET `/api/mcp/tools` -> [src/mcp/bridge.ts](src/mcp/bridge.ts)
 - Call a tool: POST `/api/mcp/tools/call` with `{ name, args }`
 
@@ -116,18 +119,21 @@ The bridge also spins an MCP client with the same env vars.
   - Bridge: `bun src/mcp/bridge.ts`
 
 Health:
+
 - `/healthz` -> liveness
 - `/readyz` -> readiness
 
 ## Example Requests
 
 - Plain chat:
+
 ```bash
 curl -N http://localhost:5000/api/chat -H "Content-Type: application/json" ^
   -d "{ \"message\": \"Summarize Baldur's Gate 3.\" }"
 ```
 
 - Chat + MCP tool (hybrid DB + Web):
+
 ```bash
 curl -N http://localhost:5000/api/chat -H "Content-Type: application/json" ^
   -d "{ \
@@ -146,6 +152,7 @@ curl -N http://localhost:5000/api/chat -H "Content-Type: application/json" ^
 ```
 
 - Direct tool testing via bridge:
+
 ```bash
 curl http://localhost:5000/api/mcp/tools
 curl -X POST http://localhost:5000/api/mcp/tools/call -H "Content-Type: application/json" ^
@@ -153,12 +160,14 @@ curl -X POST http://localhost:5000/api/mcp/tools/call -H "Content-Type: applicat
 ```
 
 Notes:
+
 - If your documents use `genres` (array) instead of `genre`, project `genres`.
 - Tool results are embedded as JSON into the LLM prompt by the chat controller.
 
 ## Environment Variables
 
 Key vars consumed across the system:
+
 - API/LLM: `OLLAMA_URL`, `LLM_MODEL`, `JSON_LIMIT`, `CLIENT_ORIGIN`
 - Mongo: `MONGODB_URI` or `MONGODB_USER_URI`
 - MCP tools: `TAVILY_API_KEY` (web search), `MONGODB_URI`

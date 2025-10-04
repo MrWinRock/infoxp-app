@@ -4,17 +4,21 @@ Base URL: `/api/games`
 
 ---
 
-### Basic CRUD
+## Basic CRUD
 
-#### **GET** `/`
+### **GET** `/`
+
 Get all games
 
-#### **GET** `/:id` 
+### **GET** `/:id`
+
 Get game by ID
 
-#### **POST** `/` 
+### **POST** `/`
+
 Create new game
 **Request body:**
+
 ```json
 {
     "title": "New Awesome Game",
@@ -29,9 +33,11 @@ Create new game
 }
 ```
 
-#### **PUT** `/:id` 
+### **PUT** `/:id`
+
 Update game by ID
 **Request body:**
+
 ```json
 {
     "title": "Updated Game Title",
@@ -39,56 +45,70 @@ Update game by ID
 }
 ```
 
-#### **DELETE** `/:id` 
+### **DELETE** `/:id`
+
 Delete game by ID
 
 ### Search & Statistics
 
-#### **GET** `/search` 
+### **GET** `/search`
+
 Search games by query
 
-#### **GET** `/stats` 
+### **GET** `/stats`
+
 Get overall game statistics
 
-#### **GET** `/top` 
+### **GET** `/top`
+
 Get top games
 
 Genre & Category
 
-#### **GET** `/genres` 
+### **GET** `/genres`
+
 Get available genres
 
-#### **GET** `/genre/:genre` 
+### **GET** `/genre/:genre`
+
 Get games by genre
 
-#### **GET** `/category/:category` 
+### **GET** `/category/:category`
+
 Get games by category
 
 Developer
 
-#### **GET** `/developers` 
+### **GET** `/developers`
+
 Get available developers
 
-#### **GET** `/developer/:developer` 
+### **GET** `/developer/:developer`
+
 Get games by developer
 
 Images
 
-#### **GET** `/without-images` 
+### **GET** `/without-images`
+
 Get games missing images
 
-#### **PUT** `/:id/image` 
+### **PUT** `/:id/image`
+
 Update a game’s image
 **Request body:**
+
 ```json
 {
     "image_url": "new_cover_image.jpg"
 }
 ```
 
-#### **POST** `/bulk-update-images` 
+### **POST** `/bulk-update-images`
+
 Bulk update images
 **Request body:**
+
 ```json
 {
     "updates": [
@@ -100,9 +120,11 @@ Bulk update images
 
 AI/LLM
 
-#### **POST** `/query` 
+### **POST** `/query`
+
 Query games using LLM
 **Request body:**
+
 ```json
 {
     "gameTitle": "ELDEN RING"
@@ -111,9 +133,11 @@ Query games using LLM
 
 Import
 
-#### **POST** `/import/json` 
+### **POST** `/import/json`
+
 Import games from JSON body
 **Request body:**
+
 ```json
 {
     "games": [
@@ -126,23 +150,28 @@ Import games from JSON body
 }
 ```
 
-#### **POST** `/import/csv` 
+### **POST** `/import/csv`
+
 Import games from CSV body
 **Request body:**
+
 ```json
 {
     "csvContent": "title,steam_app_id,genre\nMy CSV Game,555444,\"Action,Adventure\""
 }
 ```
 
-#### **POST** `/import/csv-file` 
+### **POST** `/import/csv-file`
+
 Import from uploaded CSV file
 **Request body:**
+
 ```json
 {
     "filePath": "/path/to/your/data.csv"
 }
 ```
 
-#### **POST** `/import/custom-csv` 
+### **POST** `/import/custom-csv`
+
 Bulk import custom CSV
