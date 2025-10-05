@@ -1,8 +1,10 @@
 import "dotenv/config";
 import { spawn } from "child_process";
 
+console.log(`[debug] Initial LLM_MODEL from process.env: ${process.env.LLM_MODEL}`);
+
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
-const MODEL = process.env.LLM_MODEL || "llama3.2";
+const MODEL = process.env.LLM_MODEL || "MrWinRock/infoxp";
 
 function log(...args: any[]) {
     console.log("[start]", ...args);

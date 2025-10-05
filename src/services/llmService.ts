@@ -1,12 +1,15 @@
 import axios from "axios";
 import { PassThrough } from "stream";
 
+const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
+const MODEL = process.env.LLM_MODEL || "MrWinRock/infoxp";
+
 export const queryLLM = async (prompt: string): Promise<NodeJS.ReadableStream> => {
   try {
     const response = await axios.post(
-      "http://localhost:11434/api/generate",
+      `${OLLAMA_URL}/api/generate`,
       {
-        model: "llama3.2",
+        model: MODEL,
         prompt,
         stream: true,
       },

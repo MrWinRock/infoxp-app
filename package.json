@@ -16,7 +16,7 @@
   "main": "src/main.ts",
   "scripts": {
     "dev": "bun --watch src/main.ts",
-    "start": "bun src/main.ts",
+    "start": "bun run src/main.ts",
     "build": "bun build src/main.ts --outdir dist",
     "start:prod": "bun dist/main.js",
     "scraper": "bun src/runScraper.ts",

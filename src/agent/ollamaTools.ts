@@ -2,7 +2,7 @@ import { MongoClient } from "mongodb";
 
 // ---- Env ----
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
-const MODEL = process.env.LLM_MODEL || "llama3.2";
+const MODEL = process.env.LLM_MODEL || "MrWinRock/infoxp";
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017";
 const TAVILY_API_KEY = process.env.TAVILY_API_KEY || "";
 
