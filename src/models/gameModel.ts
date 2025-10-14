@@ -11,6 +11,9 @@ export interface IGame extends Document {
   release_date?: Date;
   description?: string;
   image_url?: string;
+  required_age?: number;
+  platforms?: { windows: boolean; mac: boolean; linux: boolean };
+  categories?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,19 +42,25 @@ const gameSchema: Schema = new Schema(
       validate: {
         validator: function (imageUrl: string) {
           if (!imageUrl) return true;
-          return /^[a-zA-Z0-9_-]+\.(jpg|jpeg|png|gif|webp)$/i.test(imageUrl);
+          return /^https?:\/\/[^\s]+$/i.test(imageUrl);
         },
-        message: 'Image URL must be a filename in format: game_name.jpg (supported: jpg, jpeg, png, gif, webp)'
+        message: 'Image URL must be a valid http(s) URL'
       }
-    }
+    },
+    required_age: { type: Number, min: 0 },
+    platforms: {
+      windows: { type: Boolean, default: false },
+      mac: { type: Boolean, default: false },
+      linux: { type: Boolean, default: false }
+    },
+    categories: { type: [String], default: [] }
   },
   { timestamps: true }
 );
 
-// Index for genre searches
 gameSchema.index({ genre: 1 });
-// Index for developer searches
 gameSchema.index({ developer: 1 });
+gameSchema.index({ categories: 1 });
 
 const Game = mongoose.model<IGame>("Games", gameSchema);
 

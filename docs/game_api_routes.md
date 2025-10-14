@@ -2,176 +2,344 @@
 
 Base URL: `/api/games`
 
+All responses now use the Steam-like JSON format with fields like `Name`, `AppID`, `Developers`, `Publishers`, `Genres`, etc.
+
+---
+
+## Steam-like Format Reference
+
+All game objects follow this structure:
+
+```typescript
+{
+  AppID: number;                    // Steam App ID
+  Name: string;                     // Game title
+  "Release date"?: number;          // Unix timestamp (ms)
+  "Required age"?: number;          // Minimum age requirement
+  "About the game"?: string;        // Game description
+  "Header image"?: string;          // Full URL to header image
+  Windows?: boolean;                // Windows support
+  Mac?: boolean;                    // Mac support
+  Linux?: boolean;                  // Linux support
+  Developers?: string[];            // Array of developer names
+  Publishers?: string | string[];   // Publisher name(s)
+  Categories?: string[];            // Steam categories
+  Genres?: string[];                // Game genres
+}
+```
+
 ---
 
 ## Basic CRUD
 
 ### **GET** `/`
 
-Get all games
+Get all games with pagination
+
+**Query parameters:**
+
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Items per page (default: 20)
+
+**Response:**
+
+```json
+{
+  "games": [
+    {
+      "AppID": 1172470,
+      "Name": "Apex Legends™",
+      "Release date": 1604448000000,
+      "Required age": 0,
+      "About the game": "Conquer with character...",
+      "Header image": "https://cdn.akamai.steamstatic.com/steam/apps/1172470/header.jpg",
+      "Windows": true,
+      "Mac": false,
+      "Linux": false,
+      "Developers": ["Respawn Entertainment"],
+      "Publishers": "Electronic Arts",
+      "Categories": ["Multi-player", "PvP", "Online PvP"],
+      "Genres": ["Action", "Adventure", "Free to Play"]
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 150,
+    "pages": 8
+  }
+}
+```
 
 ### **GET** `/:id`
 
-Get game by ID
+Get game by MongoDB ID
+
+**Response:** Single game object in Steam format
 
 ### **POST** `/`
 
 Create new game
-**Request body:**
+
+**Request body (Steam format):**
 
 ```json
 {
-    "title": "New Awesome Game",
-    "steam_app_id": 123456,
-    "genre": ["Action", "Adventure"],
-    "developer": ["Awesome Devs"],
-    "publisher": "Awesome Publisher",
-    "technologies": ["Awesome Engine"],
-    "release_date": "2025-12-01T00:00:00.000Z",
-    "description": "The most awesome game ever.",
-    "image_url": "new_game.jpg"
+  "AppID": 123456,
+  "Name": "New Awesome Game",
+  "Release date": 1733011200000,
+  "Required age": 0,
+  "About the game": "The most awesome game ever.",
+  "Header image": "https://example.com/header.jpg",
+  "Windows": true,
+  "Mac": false,
+  "Linux": false,
+  "Developers": ["Awesome Devs"],
+  "Publishers": "Awesome Publisher",
+  "Categories": ["Single-player", "Steam Achievements"],
+  "Genres": ["Action", "Adventure"]
 }
 ```
+
+**Response:** Created game in Steam format (201)
 
 ### **PUT** `/:id`
 
-Update game by ID
-**Request body:**
+Update game by MongoDB ID
+
+**Request body (partial Steam format):**
 
 ```json
 {
-    "title": "Updated Game Title",
-    "publisher": "New Publisher"
+  "Name": "Updated Game Title",
+  "Publishers": "New Publisher",
+  "Header image": "https://example.com/new_header.jpg"
 }
 ```
 
+**Response:** Updated game in Steam format
+
 ### **DELETE** `/:id`
 
-Delete game by ID
+Delete game by MongoDB ID
 
-### Search & Statistics
+**Response:**
+
+```json
+{
+  "message": "Game deleted successfully"
+}
+```
+
+---
+
+## Search & Statistics
 
 ### **GET** `/search`
 
 Search games by query
 
+**Query parameters:**
+
+- `q` (optional): Search term (searches title and description)
+- `genre` (optional): Filter by genre
+- `developer` (optional): Filter by developer
+- `category` (optional): Filter by category
+
+**Response:** Array of games in Steam format
+
 ### **GET** `/stats`
 
 Get overall game statistics
 
+**Response:**
+
+```json
+{
+  "total": 150,
+  "genreCounts": [
+    { "_id": "Action", "count": 45 },
+    { "_id": "Adventure", "count": 32 }
+  ],
+  "topDevelopers": [
+    { "_id": "Valve", "count": 12 },
+    { "_id": "Epic Games", "count": 8 }
+  ]
+}
+```
+
 ### **GET** `/top`
 
-Get top games
+Get top games (most recently added)
 
-Genre & Category
+**Query parameters:**
+
+- `limit` (optional): Number of games to return (default: 10)
+
+**Response:** Array of games in Steam format
+
+---
+
+## Genre & Category
 
 ### **GET** `/genres`
 
-Get available genres
+Get all available genres
+
+**Response:**
+
+```json
+["Action", "Adventure", "RPG", "Strategy"]
+```
 
 ### **GET** `/genre/:genre`
 
 Get games by genre
 
+**Response:** Array of games in Steam format
+
 ### **GET** `/category/:category`
 
 Get games by category
 
-Developer
+**Example:** `/api/games/category/Multi-player`
+
+**Response:** Array of games in Steam format
+
+---
+
+## Developer
 
 ### **GET** `/developers`
 
-Get available developers
+Get all available developers
+
+**Response:**
+
+```json
+["Valve", "Epic Games", "Respawn Entertainment"]
+```
 
 ### **GET** `/developer/:developer`
 
 Get games by developer
 
-Images
+**Response:** Array of games in Steam format
+
+---
+
+## Images
 
 ### **GET** `/without-images`
 
-Get games missing images
+Get games missing header images
+
+**Response:** Array of games in Steam format with missing or empty `Header image` field
 
 ### **PUT** `/:id/image`
 
-Update a game’s image
+Update a game's header image
+
 **Request body:**
 
 ```json
 {
-    "image_url": "new_cover_image.jpg"
+  "image_url": "https://example.com/new_cover.jpg"
 }
 ```
+
+**Response:** Updated game in Steam format
 
 ### **POST** `/bulk-update-images`
 
-Bulk update images
+Bulk update header images
+
 **Request body:**
 
 ```json
+[
+  { "id": "507f1f77bcf86cd799439011", "image_url": "https://example.com/img1.jpg" },
+  { "id": "507f191e810c19729de860ea", "image_url": "https://example.com/img2.jpg" }
+]
+```
+
+**Response:**
+
+```json
 {
-    "updates": [
-        { "steam_app_id": 730, "image_url": "cs2_new.jpg" },
-        { "steam_app_id": 570, "image_url": "dota2_new.jpg" }
-    ]
+  "success": 2,
+  "errors": []
 }
 ```
 
-AI/LLM
+---
+
+## AI/LLM
 
 ### **POST** `/query`
 
-Query games using LLM
+Query games using LLM (streaming response)
+
 **Request body:**
 
 ```json
 {
-    "gameTitle": "ELDEN RING"
+  "query": "What are the best multiplayer games?"
 }
 ```
 
-Import
+**Response:** Streaming text/plain response from LLM
+
+---
+
+## Import
 
 ### **POST** `/import/json`
 
-Import games from JSON body
+Import games from JSON array (Steam format)
+
 **Request body:**
 
 ```json
+[
+  {
+    "AppID": 987654,
+    "Name": "My Imported Game",
+    "Genres": ["Indie", "Puzzle"],
+    "Developers": ["Indie Studio"],
+    "Publishers": "Self-published",
+    "Windows": true,
+    "Mac": true,
+    "Linux": false
+  }
+]
+```
+
+**Response:**
+
+```json
 {
-    "games": [
-        {
-            "title": "My Imported Game",
-            "steamAppId": 987654,
-            "genre": ["Indie", "Puzzle"]
-        }
-    ]
+  "success": 1,
+  "errors": [],
+  "duplicates": 0,
+  "savedIds": ["507f1f77bcf86cd799439011"]
 }
 ```
 
 ### **POST** `/import/csv`
 
-Import games from CSV body
-**Request body:**
+❌ Not implemented (returns 501)
 
-```json
-{
-    "csvContent": "title,steam_app_id,genre\nMy CSV Game,555444,\"Action,Adventure\""
-}
-```
+CSV import is deprecated. Use `/import/json` with Steam-like format instead.
 
 ### **POST** `/import/csv-file`
 
-Import from uploaded CSV file
-**Request body:**
+❌ Not implemented (returns 501)
 
-```json
-{
-    "filePath": "/path/to/your/data.csv"
-}
-```
+CSV file import is deprecated. Use `/import/json` with Steam-like format instead.
 
 ### **POST** `/import/custom-csv`
 
-Bulk import custom CSV
+❌ Not implemented (returns 501)
+
+Custom CSV import is deprecated. Use `/import/json` with Steam-like format instead.

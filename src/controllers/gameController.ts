@@ -1,621 +1,439 @@
 import type { Request, Response } from "express";
 import Game from "../models/gameModel";
+import { DataImportService, type SteamGameRecord } from "../services/dataImportService";
 import { queryLLM } from "../services/llmService";
-import { GAME_GENRES, GENRE_CATEGORIES, POPULAR_GENRES, GENRE_MAPPING, isValidGenre, filterValidGenres } from "../constants/genres";
-import { DataImportService } from "../services/dataImportService";
+import { GAME_GENRES } from "../constants/genres";
 
+const importService = new DataImportService();
+
+// GET all games with pagination - returns Steam-like shape
 export const getGames = async (req: Request, res: Response) => {
     try {
-        const games = await Game.find();
-        res.json(games);
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 20;
+        const skip = (page - 1) * limit;
+
+        const total = await Game.countDocuments();
+        const docs = await Game.find().skip(skip).limit(limit).lean();
+        const data = docs.map(d => importService.toSteamShape(d));
+
+        res.json({
+            games: data,
+            pagination: {
+                page,
+                limit,
+                total,
+                pages: Math.ceil(total / limit)
+            }
+        });
     } catch (error) {
-        res.status(500).json({ error: "Failed to fetch games." });
+        console.error("Error fetching games:", error);
+        res.status(500).json({ error: "Failed to fetch games" });
     }
 };
 
+// GET all games without pagination - returns Steam-like shape
+export const getAllGames = async (req: Request, res: Response) => {
+    try {
+        const docs = await Game.find().lean();
+        const data = docs.map(d => importService.toSteamShape(d));
+        res.json(data);
+    } catch (error) {
+        console.error("Error fetching games:", error);
+        res.status(500).json({ error: "Failed to fetch games" });
+    }
+};
+
+// GET game by ID - returns Steam-like shape
 export const getGameById = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const game = await Game.findById(id);
+        const game = await Game.findById(id).lean();
 
         if (!game) {
-            return res.status(404).json({ error: "Game not found." });
+            return res.status(404).json({ error: "Game not found" });
         }
 
-        res.json(game);
+        res.json(importService.toSteamShape(game));
     } catch (error) {
-        res.status(500).json({ error: "Failed to fetch game." });
+        console.error("Error fetching game:", error);
+        res.status(500).json({ error: "Failed to fetch game" });
     }
 };
 
+// POST query with LLM
 export const queryGameWithLLM = async (req: Request, res: Response) => {
-    const { gameTitle } = req.body;
-
     try {
-        const game = await Game.findOne({ title: gameTitle });
-        if (!game) {
-            return res.status(404).json({ error: "Game not found." });
+        const { query } = req.body;
+        if (!query) {
+            return res.status(400).json({ error: "Query is required" });
         }
 
-        const prompt = `Provide detailed information about the game titled "${game.title}". Description: ${game.description}`;
-        const llmResponse = await queryLLM(prompt);
+        // Get all games for context
+        const games = await Game.find().lean();
+        const gamesContext = games.map(g =>
+            `${g.title} - ${g.genre.join(", ")} by ${g.developer?.join(", ")}`
+        ).join("\n");
 
-        res.json({ response: llmResponse });
+        const prompt = `Based on these games:\n${gamesContext}\n\nUser question: ${query}\n\nProvide a helpful response about the games.`;
+
+        const stream = await queryLLM(prompt);
+
+        res.setHeader("Content-Type", "text/plain; charset=utf-8");
+        stream.pipe(res);
     } catch (error) {
-        res.status(500).json({ error: "Failed to process the request." });
+        console.error("Error querying LLM:", error);
+        res.status(500).json({ error: "Failed to query LLM" });
     }
 };
 
-export const createGame = async (req: Request, res: Response) => {
-    try {
-        const gameData = req.body;
-
-        if (gameData.genre) {
-            gameData.genre = filterValidGenres(gameData.genre);
-        }
-
-        const newGame = new Game(gameData);
-        await newGame.save();
-
-        res.status(201).json({
-            message: "Game created successfully",
-            game: newGame
-        });
-    } catch (error) {
-        console.error('Create game error:', error);
-        res.status(400).json({ error: "Failed to create game." });
-    }
-};
-
-export const updateGame = async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params;
-        const updateData = req.body;
-
-        if (updateData.genre) {
-            updateData.genre = filterValidGenres(updateData.genre);
-        }
-
-        const updatedGame = await Game.findByIdAndUpdate(
-            id,
-            { $set: updateData },
-            { new: true, runValidators: true }
-        );
-
-        if (!updatedGame) {
-            return res.status(404).json({ error: "Game not found." });
-        }
-
-        res.json({
-            message: "Game updated successfully",
-            game: updatedGame
-        });
-    } catch (error) {
-        console.error('Update game error:', error);
-        res.status(400).json({ error: "Failed to update game." });
-    }
-};
-
+// GET search games by query - returns Steam-like shape
 export const searchGames = async (req: Request, res: Response) => {
     try {
-        const { q, genre, developer, publisher, technology, minRating, maxRating, sortBy, order } = req.query;
+        const { q, genre, developer, category } = req.query;
 
-        const searchQuery: any = {};
+        const filter: any = {};
 
-        if (q) {
-            searchQuery.$or = [
-                { title: { $regex: q, $options: 'i' } },
-                { description: { $regex: q, $options: 'i' } },
-                { franchise: { $regex: q, $options: 'i' } }
+        if (q && typeof q === "string") {
+            filter.$or = [
+                { title: { $regex: q, $options: "i" } },
+                { description: { $regex: q, $options: "i" } }
             ];
         }
 
-        if (genre) {
-            const genresRaw = typeof genre === 'string' ? genre.split(',') : [genre];
-            const genres: string[] = genresRaw.map(g => typeof g === 'string' ? g : String(g));
-            const validGenres = filterValidGenres(genres);
-            if (validGenres.length > 0) {
-                searchQuery.genres = { $in: validGenres };
-            }
+        if (genre && typeof genre === "string") {
+            filter.genre = genre;
         }
 
-        if (developer) {
-            searchQuery.developer = { $regex: developer, $options: 'i' };
+        if (developer && typeof developer === "string") {
+            filter.developer = developer;
         }
 
-        if (publisher) {
-            searchQuery.publisher = { $regex: publisher, $options: 'i' };
+        if (category && typeof category === "string") {
+            filter.categories = category;
         }
 
-        if (technology) {
-            searchQuery.technologies = { $in: [new RegExp(technology as string, 'i')] };
-        }
+        const docs = await Game.find(filter).lean();
+        const data = docs.map(d => importService.toSteamShape(d));
 
-        if (minRating || maxRating) {
-            searchQuery.rating = {};
-            if (minRating) searchQuery.rating.$gte = parseFloat(minRating as string);
-            if (maxRating) searchQuery.rating.$lte = parseFloat(maxRating as string);
-        }
-
-        let sortOptions: any = {};
-        if (sortBy) {
-            const sortField = sortBy as string;
-            const sortOrder = order === 'desc' ? -1 : 1;
-
-            switch (sortField) {
-                case 'rating':
-                    sortOptions.rating = sortOrder;
-                    break;
-                case 'releaseDate':
-                    sortOptions.releaseDate = sortOrder;
-                    break;
-                case 'title':
-                    sortOptions.title = sortOrder;
-                    break;
-                case 'reviews':
-                    sortOptions.reviewCount = sortOrder;
-                    break;
-                default:
-                    sortOptions.title = 1
-            }
-        } else {
-            sortOptions.title = 1
-        }
-
-        const games = await Game.find(searchQuery).sort(sortOptions);
-
-        res.json({
-            games,
-            count: games.length,
-            filters: {
-                query: q,
-                genre,
-                developer,
-                publisher,
-                technology,
-                rating: { min: minRating, max: maxRating }
-            }
-        });
+        res.json(data);
     } catch (error) {
-        res.status(500).json({ error: "Failed to search games." });
+        console.error("Error searching games:", error);
+        res.status(500).json({ error: "Failed to search games" });
     }
 };
 
+// GET games by genre - returns Steam-like shape
 export const getGamesByGenre = async (req: Request, res: Response) => {
     try {
         const { genre } = req.params;
-
-        if (!isValidGenre(genre)) {
-            return res.status(400).json({
-                error: "Invalid genre",
-                availableGenres: POPULAR_GENRES
-            });
-        }
-
-        const games = await Game.find({ genres: { $in: [genre] } });
-        res.json({
-            genre,
-            games,
-            count: games.length
-        });
+        const docs = await Game.find({ genre }).lean();
+        const data = docs.map(d => importService.toSteamShape(d));
+        res.json(data);
     } catch (error) {
-        res.status(500).json({ error: "Failed to fetch games by genre." });
+        console.error("Error fetching games by genre:", error);
+        res.status(500).json({ error: "Failed to fetch games by genre" });
     }
 };
 
-export const deleteGame = async (req: Request, res: Response) => {
+// GET games by developer - returns Steam-like shape
+export const getGamesByDeveloper = async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
-        const deletedGame = await Game.findByIdAndDelete(id);
-
-        if (!deletedGame) {
-            return res.status(404).json({ error: "Game not found." });
-        }
-
-        res.json({ message: "Game deleted successfully" });
+        const { developer } = req.params;
+        const docs = await Game.find({ developer }).lean();
+        const data = docs.map(d => importService.toSteamShape(d));
+        res.json(data);
     } catch (error) {
-        res.status(500).json({ error: "Failed to delete game." });
+        console.error("Error fetching games by developer:", error);
+        res.status(500).json({ error: "Failed to fetch games by developer" });
     }
 };
 
-export const getAvailableGenres = async (req: Request, res: Response) => {
-    try {
-        const genresInDb = await Game.distinct('genres');
-
-        res.json({
-            all: GAME_GENRES,
-            inDatabase: genresInDb,
-            categories: GENRE_CATEGORIES,
-            popular: POPULAR_GENRES,
-            total: GAME_GENRES.length,
-            inDatabaseCount: genresInDb.length
-        });
-    } catch (error) {
-        res.status(500).json({ error: "Failed to fetch genres." });
-    }
-};
-
+// GET games by category - returns Steam-like shape
 export const getGamesByCategory = async (req: Request, res: Response) => {
     try {
         const { category } = req.params;
-        const categoryKey = category.toUpperCase() as keyof typeof GENRE_CATEGORIES;
-        const categoryGenres = GENRE_CATEGORIES[categoryKey];
-
-        if (!categoryGenres) {
-            return res.status(400).json({
-                error: "Invalid category",
-                availableCategories: Object.keys(GENRE_CATEGORIES).map(k => k.toLowerCase())
-            });
-        }
-
-        const games = await Game.find({
-            genres: { $in: categoryGenres }
-        });
-
-        res.json({
-            category: category.toLowerCase(),
-            genres: categoryGenres,
-            games,
-            count: games.length
-        });
+        const docs = await Game.find({ categories: category }).lean();
+        const data = docs.map(d => importService.toSteamShape(d));
+        res.json(data);
     } catch (error) {
-        res.status(500).json({ error: "Failed to fetch games by category." });
+        console.error("Error fetching games by category:", error);
+        res.status(500).json({ error: "Failed to fetch games by category" });
     }
 };
 
+// GET available genres
+export const getAvailableGenres = async (req: Request, res: Response) => {
+    try {
+        const genres = await Game.distinct("genre");
+        res.json(genres);
+    } catch (error) {
+        console.error("Error fetching genres:", error);
+        res.status(500).json({ error: "Failed to fetch genres" });
+    }
+};
+
+// GET available developers
+export const getAvailableDevelopers = async (req: Request, res: Response) => {
+    try {
+        const developers = await Game.distinct("developer");
+        res.json(developers.flat());
+    } catch (error) {
+        console.error("Error fetching developers:", error);
+        res.status(500).json({ error: "Failed to fetch developers" });
+    }
+};
+
+// GET game statistics
 export const getGameStatistics = async (req: Request, res: Response) => {
     try {
-        const totalGames = await Game.countDocuments();
-
-        const genreStats = await Game.aggregate([
-            { $unwind: '$genres' },
-            { $group: { _id: '$genres', count: { $sum: 1 } } },
-            { $sort: { count: -1 } },
-            { $limit: 20 }
+        const total = await Game.countDocuments();
+        const genreCounts = await Game.aggregate([
+            { $unwind: "$genre" },
+            { $group: { _id: "$genre", count: { $sum: 1 } } },
+            { $sort: { count: -1 } }
         ]);
-
-        const developerStats = await Game.aggregate([
-            { $group: { _id: '$developer', count: { $sum: 1 } } },
+        const developerCounts = await Game.aggregate([
+            { $unwind: "$developer" },
+            { $group: { _id: "$developer", count: { $sum: 1 } } },
             { $sort: { count: -1 } },
             { $limit: 10 }
-        ]);
-
-        const technologyStats = await Game.aggregate([
-            { $unwind: '$technologies' },
-            { $group: { _id: '$technologies', count: { $sum: 1 } } },
-            { $sort: { count: -1 } },
-            { $limit: 10 }
-        ]);
-
-        const ratingStats = await Game.aggregate([
-            {
-                $bucket: {
-                    groupBy: '$rating',
-                    boundaries: [0, 20, 40, 60, 80, 100],
-                    default: 'Unknown',
-                    output: {
-                        count: { $sum: 1 },
-                        avgRating: { $avg: '$rating' }
-                    }
-                }
-            }
         ]);
 
         res.json({
-            total: totalGames,
-            genres: genreStats,
-            developers: developerStats,
-            technologies: technologyStats,
-            ratings: ratingStats
+            total,
+            genreCounts,
+            topDevelopers: developerCounts
         });
     } catch (error) {
-        res.status(500).json({ error: "Failed to fetch game statistics." });
+        console.error("Error fetching statistics:", error);
+        res.status(500).json({ error: "Failed to fetch statistics" });
     }
 };
 
+// GET top games - returns Steam-like shape
 export const getTopGames = async (req: Request, res: Response) => {
     try {
-        const { by = 'rating', limit = 10 } = req.query;
-
-        let sortField = 'rating';
-        switch (by) {
-            case 'reviews':
-                sortField = 'reviewCount';
-                break;
-            case 'recent':
-                sortField = 'releaseDate';
-                break;
-            case 'rating':
-            default:
-                sortField = 'rating';
-                break;
-        }
-
-        const games = await Game.find({})
-            .sort({ [sortField]: -1 })
-            .limit(parseInt(limit as string))
-            .select('title steamAppId rating reviewCount releaseDate genres developer publisher');
-
-        res.json({
-            topGames: games,
-            sortedBy: by,
-            count: games.length
-        });
+        const limit = parseInt(req.query.limit as string) || 10;
+        const docs = await Game.find()
+            .sort({ createdAt: -1 })
+            .limit(limit)
+            .lean();
+        const data = docs.map(d => importService.toSteamShape(d));
+        res.json(data);
     } catch (error) {
-        res.status(500).json({ error: "Failed to fetch top games." });
+        console.error("Error fetching top games:", error);
+        res.status(500).json({ error: "Failed to fetch top games" });
     }
 };
 
-export const importFromCSVFile = async (req: Request, res: Response) => {
+// GET games without images - returns Steam-like shape
+export const getGamesWithoutImages = async (req: Request, res: Response) => {
     try {
-        const { filePath } = req.body;
-
-        if (!filePath) {
-            return res.status(400).json({
-                error: "File path is required"
-            });
-        }
-
-        const importService = new DataImportService();
-        const results = await importService.importFromCSVFile(filePath);
-
-        res.json({
-            message: "CSV file import completed",
-            results: {
-                successful: results.success,
-                duplicates: results.duplicates,
-                errors: results.errors.length,
-                errorDetails: results.errors
-            }
-        });
+        const docs = await Game.find({
+            $or: [
+                { image_url: { $exists: false } },
+                { image_url: null },
+                { image_url: "" }
+            ]
+        }).lean();
+        const data = docs.map(d => importService.toSteamShape(d));
+        res.json(data);
     } catch (error) {
-        console.error('CSV file import error:', error);
-        res.status(500).json({
-            error: "Failed to import CSV file",
-            details: error instanceof Error ? error.message : "Unknown error"
-        });
+        console.error("Error fetching games without images:", error);
+        res.status(500).json({ error: "Failed to fetch games without images" });
     }
 };
 
-// Enhanced bulk import for your custom CSV data
-export const bulkImportCustomCSV = async (req: Request, res: Response) => {
-    try {
-        const { csvContent } = req.body;
-
-        if (!csvContent) {
-            return res.status(400).json({
-                error: "CSV content is required"
-            });
-        }
-
-        const importService = new DataImportService();
-        const results = await importService.importFromCSV(csvContent);
-
-        res.json({
-            message: "Custom CSV import completed",
-            results: {
-                successful: results.success,
-                duplicates: results.duplicates,
-                errors: results.errors.length,
-                errorDetails: results.errors
-            }
-        });
-    } catch (error) {
-        console.error('Custom CSV import error:', error);
-        res.status(500).json({
-            error: "Failed to import custom CSV",
-            details: error instanceof Error ? error.message : "Unknown error"
-        });
-    }
-};
-
-export const importGamesFromJSON = async (req: Request, res: Response) => {
-    try {
-        const { games } = req.body;
-
-        console.log('Importing games from JSON:', games);
-
-        if (!Array.isArray(games)) {
-            return res.status(400).json({
-                error: "Request body must contain a 'games' array"
-            });
-        }
-
-        const normalized = games.map((g: any) => ({
-            title: g.title,
-            steam_app_id: g.steamAppId != null ? String(g.steamAppId) : undefined,
-            genre: Array.isArray(g.genre) ? g.genre.join(', ') : g.genre,
-            developer: Array.isArray(g.developer) ? g.developer.join(', ') : g.developer,
-            publisher: g.publisher,
-            technologies: Array.isArray(g.technologies) ? g.technologies.join(', ') : g.technologies,
-            release_date: g.releaseDate,
-            description: g.description,
-            image_url: g.imageUrl
-        })).filter((g: any) => !!g.title);
-
-        const importService = new DataImportService();
-        const results = await importService.importFromJSON(normalized);
-
-        res.json({
-            message: "Import completed",
-            results: {
-                totalReceived: games.length,
-                totalProcessed: normalized.length,
-                successful: results.success,
-                duplicates: results.duplicates,
-                errors: results.errors.length,
-                errorDetails: results.errors
-            }
-        });
-    } catch (error) {
-        console.error('Import error:', error);
-        res.status(500).json({
-            error: "Failed to import games",
-            details: error instanceof Error ? error.message : "Unknown error"
-        });
-    }
-};
-
-export const importGamesFromCSV = async (req: Request, res: Response) => {
-    try {
-        const { csvContent } = req.body;
-
-        if (!csvContent || typeof csvContent !== 'string') {
-            return res.status(400).json({
-                error: "Request body must contain 'csvContent' as a string"
-            });
-        }
-
-        const importService = new DataImportService();
-        const results = await importService.importFromCSV(csvContent);
-
-        res.json({
-            message: "CSV import completed",
-            results: {
-                successful: results.success,
-                duplicates: results.duplicates,
-                errors: results.errors.length,
-                errorDetails: results.errors
-            }
-        });
-    } catch (error) {
-        console.error('CSV import error:', error);
-        res.status(500).json({
-            error: "Failed to import CSV",
-            details: error instanceof Error ? error.message : "Unknown error"
-        });
-    }
-};
-
+// PUT update game image
 export const updateGameImage = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { image_url } = req.body;
 
         if (!image_url) {
-            return res.status(400).json({
-                error: "image_url is required"
-            });
+            return res.status(400).json({ error: "image_url is required" });
         }
 
-        const updatedGame = await Game.findByIdAndUpdate(
+        const updated = await Game.findByIdAndUpdate(
             id,
-            { $set: { image_url } },
+            { image_url },
             { new: true, runValidators: true }
-        );
+        ).lean();
 
-        if (!updatedGame) {
-            return res.status(404).json({ error: "Game not found." });
+        if (!updated) {
+            return res.status(404).json({ error: "Game not found" });
         }
 
-        res.json({
-            message: "Game image updated successfully",
-            game: updatedGame
-        });
+        res.json(importService.toSteamShape(updated));
     } catch (error) {
-        console.error('Update game image error:', error);
-        res.status(400).json({ error: "Failed to update game image." });
+        console.error("Error updating image:", error);
+        res.status(500).json({ error: "Failed to update image" });
     }
 };
 
-export const getGamesWithoutImages = async (req: Request, res: Response) => {
-    try {
-        const gamesWithoutImages = await Game.find({
-            $or: [
-                { image_url: { $exists: false } },
-                { image_url: null },
-                { image_url: "" }
-            ]
-        }).select('title steam_app_id developer publisher');
-
-        res.json({
-            games: gamesWithoutImages,
-            count: gamesWithoutImages.length
-        });
-    } catch (error) {
-        res.status(500).json({ error: "Failed to fetch games without images." });
-    }
-};
-
+// POST bulk update images
 export const bulkUpdateImages = async (req: Request, res: Response) => {
     try {
-        const { updates } = req.body;
-
+        const updates = req.body; // Array of { id, image_url }
         if (!Array.isArray(updates)) {
-            return res.status(400).json({
-                error: "Expected array of update objects with steam_app_id and image_url"
-            });
+            return res.status(400).json({ error: "Body must be an array" });
         }
 
-        const results = {
-            updated: 0,
-            errors: [] as Array<{ steam_app_id: number; error: string }>
-        };
+        const results = { success: 0, errors: [] as any[] };
 
-        for (const update of updates) {
+        for (const { id, image_url } of updates) {
             try {
-                const result = await Game.findOneAndUpdate(
-                    { steam_app_id: update.steam_app_id },
-                    { $set: { image_url: update.image_url } },
-                    { new: true, runValidators: true }
-                );
-
-                if (result) {
-                    results.updated++;
-                } else {
-                    results.errors.push({
-                        steam_app_id: update.steam_app_id,
-                        error: "Game not found"
-                    });
-                }
-            } catch (error) {
-                results.errors.push({
-                    steam_app_id: update.steam_app_id,
-                    error: error instanceof Error ? error.message : "Unknown error"
-                });
+                await Game.findByIdAndUpdate(id, { image_url });
+                results.success++;
+            } catch (err: any) {
+                results.errors.push({ id, error: err.message });
             }
         }
 
-        res.json({
-            message: "Bulk image update completed",
-            results
-        });
+        res.json(results);
     } catch (error) {
-        console.error('Bulk image update error:', error);
-        res.status(500).json({ error: "Failed to bulk update images." });
+        console.error("Error bulk updating images:", error);
+        res.status(500).json({ error: "Failed to bulk update images" });
     }
 };
 
-export const getGamesByDeveloper = async (req: Request, res: Response) => {
+// POST create game - accepts Steam-like shape
+export const createGame = async (req: Request, res: Response) => {
     try {
-        const { developer } = req.params;
+        const gameData: SteamGameRecord = req.body;
 
-        const games = await Game.find({
-            developer: { $in: [new RegExp(developer, 'i')] }
-        });
+        if (!gameData.Name) {
+            return res.status(400).json({ error: "Name is required" });
+        }
 
-        res.json({
-            developer,
-            games,
-            count: games.length
-        });
+        const result = await importService.importFromJSON([gameData]);
+
+        if (result.errors.length > 0) {
+            return res.status(400).json({
+                error: "Failed to create game",
+                details: result.errors
+            });
+        }
+
+        if (result.duplicates > 0) {
+            return res.status(409).json({ error: "Game already exists" });
+        }
+
+        const created = await Game.findById(result.savedIds[0]).lean();
+        res.status(201).json(importService.toSteamShape(created));
     } catch (error) {
-        res.status(500).json({ error: "Failed to fetch games by developer." });
+        console.error("Error creating game:", error);
+        res.status(500).json({ error: "Failed to create game" });
     }
 };
 
-// Add missing getAvailableDevelopers function
-export const getAvailableDevelopers = async (req: Request, res: Response) => {
+// PUT update game - accepts Steam-like shape
+export const updateGame = async (req: Request, res: Response) => {
     try {
-        const developers = await Game.distinct('developer');
-        const flatDevelopers = developers.flat().filter(Boolean);
-        const uniqueDevelopers = [...new Set(flatDevelopers)].sort();
+        const { id } = req.params;
+        const gameData: SteamGameRecord = req.body;
 
-        res.json({
-            developers: uniqueDevelopers,
-            count: uniqueDevelopers.length
-        });
+        const existing = await Game.findById(id);
+        if (!existing) {
+            return res.status(404).json({ error: "Game not found" });
+        }
+
+        const publishers = Array.isArray(gameData.Publishers)
+            ? gameData.Publishers.join(", ")
+            : (gameData.Publishers ?? undefined);
+        const releaseDate = typeof gameData["Release date"] === "number"
+            ? new Date(gameData["Release date"])
+            : undefined;
+
+        const updateData: any = {};
+        if (gameData.Name) updateData.title = gameData.Name;
+        if (gameData.AppID) updateData.steam_app_id = gameData.AppID;
+        if (gameData.Developers) updateData.developer = gameData.Developers;
+        if (publishers) updateData.publisher = publishers;
+        if (releaseDate) updateData.release_date = releaseDate;
+        if (gameData["About the game"]) updateData.description = gameData["About the game"];
+        if (gameData["Header image"]) updateData.image_url = gameData["Header image"];
+        if (gameData["Required age"] !== undefined) updateData.required_age = gameData["Required age"];
+        if (gameData.Categories) updateData.categories = gameData.Categories;
+        if (gameData.Genres) {
+            const svc = new DataImportService();
+            updateData.genre = (svc as any).parseGenres(gameData.Genres);
+        }
+        if (gameData.Windows !== undefined || gameData.Mac !== undefined || gameData.Linux !== undefined) {
+            updateData.platforms = {
+                windows: !!gameData.Windows,
+                mac: !!gameData.Mac,
+                linux: !!gameData.Linux
+            };
+        }
+
+        const updated = await Game.findByIdAndUpdate(id, updateData, {
+            new: true,
+            runValidators: true
+        }).lean();
+
+        res.json(importService.toSteamShape(updated));
     } catch (error) {
-        res.status(500).json({ error: "Failed to fetch developers." });
+        console.error("Error updating game:", error);
+        res.status(500).json({ error: "Failed to update game" });
     }
+};
+
+// DELETE game
+export const deleteGame = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const game = await Game.findByIdAndDelete(id);
+
+        if (!game) {
+            return res.status(404).json({ error: "Game not found" });
+        }
+
+        res.json({ message: "Game deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting game:", error);
+        res.status(500).json({ error: "Failed to delete game" });
+    }
+};
+
+// POST import from JSON - accepts Steam-like array
+export const importGamesFromJSON = async (req: Request, res: Response) => {
+    try {
+        if (!Array.isArray(req.body)) {
+            return res.status(400).json({ error: "Body must be an array" });
+        }
+        const result = await importService.importFromJSON(req.body as SteamGameRecord[]);
+        res.json(result);
+    } catch (error) {
+        console.error("Import from JSON failed:", error);
+        res.status(500).json({ error: "Failed to import games" });
+    }
+};
+
+// POST import from CSV (legacy - converts to Steam shape internally if needed)
+export const importGamesFromCSV = async (req: Request, res: Response) => {
+    try {
+        // If you still have CSV data, parse it and convert to SteamGameRecord format
+        // For now, return not implemented
+        res.status(501).json({ error: "CSV import not implemented with new interface" });
+    } catch (error) {
+        console.error("CSV import failed:", error);
+        res.status(500).json({ error: "Failed to import from CSV" });
+    }
+};
+
+// POST import from CSV file (legacy)
+export const importFromCSVFile = async (req: Request, res: Response) => {
+    res.status(501).json({ error: "CSV file import not implemented with new interface" });
+};
+
+// POST bulk import custom CSV (legacy)
+export const bulkImportCustomCSV = async (req: Request, res: Response) => {
+    res.status(501).json({ error: "Custom CSV import not implemented with new interface" });
+};
+
+// POST bulk import - same as importGamesFromJSON
+export const bulkImportGames = async (req: Request, res: Response) => {
+    return importGamesFromJSON(req, res);
 };
