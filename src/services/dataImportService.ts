@@ -2,6 +2,7 @@ import Game from "../models/gameModel";
 import { GENRE_MAPPING, filterValidGenres, type GameGenre } from "../constants/genres";
 
 export interface SteamGameRecord {
+    _id?: string;
     AppID: number;
     Name: string;
     "Release date"?: number;
@@ -104,6 +105,7 @@ export class DataImportService {
     // Helper to return DB docs in Steam-like response shape
     public toSteamShape(doc: any): SteamGameRecord {
         return {
+            _id: doc?._id ? String(doc._id) : undefined,
             AppID: doc.steam_app_id,
             Name: doc.title,
             "Release date": doc.release_date ? new Date(doc.release_date).getTime() : undefined,
