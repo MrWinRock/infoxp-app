@@ -2,16 +2,21 @@ import type { Request, Response } from "express";
 import User from "../models/userModel";
 import { generateToken } from "../services/jwtService";
 import type { AuthenticatedRequest } from "../middlewares/authMiddleware";
+import { Types } from "mongoose";
 
 export const getUsers = async (req: Request, res: Response) => {
   try {
-    const users = await User.find().select("-password");
+    const users = await User.find({
+      $or: [
+        { email: { $exists: true, $nin: ["", null] } },
+        { name: { $not: /^Guest$/i } }
+      ]
+    }).select("-password");
     res.status(200).json(users);
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch users", error });
   }
 };
-
 export const createUser = async (req: Request, res: Response) => {
   try {
     const { email, password, name } = req.body;
@@ -197,14 +202,16 @@ export const updatePassword = async (req: Request, res: Response) => {
 
 export const promoteUserToAdmin = async (req: Request, res: Response) => {
   try {
-    const { email, id } = req.body;
+    const { id } = req.params;
 
-    if (!email && !id) {
-      return res.status(400).json({ message: "User email or ID is required" });
+    if (!id) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+    if (!Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid user ID" });
     }
 
-    const user = await User.findOne(email ? { email } : { _id: id });
-
+    const user = await User.findById(id);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -213,9 +220,38 @@ export const promoteUserToAdmin = async (req: Request, res: Response) => {
     await user.save();
 
     res.status(200).json({ message: `User ${user.name} has been promoted to admin.` });
+  } catch (error: any) {
+    console.error("promoteUserToAdmin error:", error);
+    const status = error?.name === "ValidationError" ? 400 : 500;
+    res.status(status).json({ message: "Failed to promote user", error: error?.message });
+  }
+};
 
-  } catch (error) {
-    res.status(500).json({ message: "Failed to promote user", error });
+export const demoteAdminToUser = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+    if (!Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    } else if (user.role !== "admin") {
+      return res.status(400).json({ message: "User is not an admin" });
+    }
+
+    user.role = "user";
+    await user.save();
+
+    res.status(200).json({ message: `Admin ${user.name} has been demoted to user.` });
+  } catch (error: any) {
+    console.error("demoteAdminToUser error:", error);
+    const status = error?.name === "ValidationError" ? 400 : 500;
+    res.status(status).json({ message: "Failed to demote admin", error: error?.message });
   }
 };
 
@@ -239,12 +275,23 @@ export const updateUser = async (req: Request, res: Response) => {
     const { id } = req.params;
     const updates = req.body;
 
-    const user = await User.findByIdAndUpdate(id, updates, { new: true });
+    const user = await User.findByIdAndUpdate(id, updates, {
+      new: true,
+      runValidators: true
+    }).select("-password");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.status(200).json({ message: "User updated successfully", user });
+    const userResponse = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      date_of_birth: user.date_of_birth,
+      role: user.role
+    };
+
+    res.status(200).json({ message: "User updated successfully", user: userResponse });
   } catch (error) {
     res.status(500).json({ message: "Failed to update user", error });
   }

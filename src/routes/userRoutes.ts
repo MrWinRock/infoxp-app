@@ -7,6 +7,7 @@ import {
     getProfile,
     updatePassword,
     promoteUserToAdmin,
+    demoteAdminToUser,
     deleteUser
 } from "../controllers/userController";
 import { authenticateToken, isAdmin } from "../middlewares/authMiddleware";
@@ -26,5 +27,6 @@ router.get("/", authenticateToken, isAdmin, getUsers);
 router.get("/:id", authenticateToken, isAdmin, getUserById);
 router.delete("/:id", authenticateToken, isAdmin, deleteUser);
 router.put("/:id/promote", authenticateToken, isAdmin, promoteUserToAdmin);
+router.put("/:id/demote", authenticateToken, isAdmin, demoteAdminToUser);
 
 export default router;
