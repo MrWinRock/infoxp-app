@@ -54,11 +54,30 @@ export const handleChatMessage = async (req: Request, res: Response) => {
     let augmentedPrompt = message;
     if (toolName) {
       try {
+        // Default web_search args: use the user message as query if q not provided
+        if (toolName === "web_search") {
+          const depth = toolArgs?.depth === "advanced" ? "advanced" : "basic";
+          const maxResults = Math.min(Math.max(Number(toolArgs?.maxResults ?? 5), 1), 10);
+          toolArgs = {
+            q: toolArgs?.q && String(toolArgs.q).trim().length ? String(toolArgs.q) : message,
+            maxResults,
+            depth
+          };
+        }
+
         const mcp = await getMcpClient();
         const toolResult = await mcp.callTool({
           name: toolName,
           arguments: toolArgs || {}
         });
+
+        // Log a compact summary for debugging
+        console.log("[mcp] tool ok", {
+          name: toolName,
+          args: toolArgs,
+          contentItems: Array.isArray((toolResult as any)?.content) ? (toolResult as any).content.length : 0,
+        });
+
         const toolJson = JSON.stringify(toolResult, null, 2);
         augmentedPrompt =
           `You have access to tool outputs. Incorporate them helpfully.
@@ -68,11 +87,13 @@ ${toolJson}
 
 User message:
 ${message}`;
+
         await new ChatMessage({
           chat_session_id: chatSession._id,
           sender: "tool",
           message: `[${toolName}] ${toolJson}`
         }).save();
+
       } catch (e) {
         console.error("MCP tool invocation failed:", e);
         augmentedPrompt =
