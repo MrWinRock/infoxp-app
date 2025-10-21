@@ -7,45 +7,64 @@ import User from "../models/userModel";
 import { getMcpClient } from "../mcp/mcpClient";
 
 export const handleChatMessage = async (req: Request, res: Response) => {
-
   let { userId, message, toolName, toolArgs } = req.body;
-  if (!userId && (req.params as any)?.userId) {
-    userId = (req.params as any).userId;
-  }
+  const { sessionId: paramSessionId } = req.params as any;
 
   if (!message) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
+  // If userId is provided in body, validate format upfront
+  if (userId && !/^[0-9a-fA-F]{24}$/.test(String(userId))) {
+    return res.status(400).json({ error: "Invalid userId" });
+  }
+
   try {
-    if (!userId) {
-      let guestUser = await User.findOne({ role: "guest" });
-      if (!guestUser) {
-        guestUser = new User({ name: "Guest", role: "guest" });
-        try {
-          await guestUser.save();
-        } catch (e: any) {
-          if (e?.code === 11000) {
-            guestUser = await User.findOne({ role: "guest" });
-          } else {
-            throw e;
+    let chatSession: typeof ChatSession.prototype | null = null;
+
+    if (paramSessionId) {
+      if (!/^[0-9a-fA-F]{24}$/.test(paramSessionId)) {
+        return res.status(400).json({ error: "Invalid sessionId" });
+      }
+      chatSession = await ChatSession.findById(paramSessionId);
+      if (!chatSession) {
+        return res.status(404).json({ error: "Session not found" });
+      }
+      // If userId is provided in body, enforce ownership
+      if (userId && String(chatSession.user_id) !== String(userId)) {
+        return res.status(403).json({ error: "Session does not belong to userId" });
+      }
+      // Normalize userId downstream to the session owner
+      userId = String(chatSession.user_id);
+    } else {
+      // No sessionId -> create a new session using provided userId or fallback to guest
+      if (!userId) {
+        let guestUser = await User.findOne({ role: "guest" });
+        if (!guestUser) {
+          guestUser = new User({ name: "Guest", role: "guest" });
+          try {
+            await guestUser.save();
+          } catch (e: any) {
+            if (e?.code === 11000) {
+              guestUser = await User.findOne({ role: "guest" });
+            } else {
+              throw e;
+            }
           }
         }
+        userId = guestUser!._id;
       }
-      userId = guestUser!._id;
-    }
 
-    let chatSession = await ChatSession.findOne({
-      user_id: new mongoose.Types.ObjectId(userId),
-    });
-
-    if (!chatSession) {
       chatSession = new ChatSession({
         user_id: new mongoose.Types.ObjectId(userId),
         session_started: new Date(),
       });
       await chatSession.save();
     }
+
+    // Expose the session id so clients can continue the chat
+    res.setHeader("X-Chat-Session-Id", String(chatSession._id));
+    res.setHeader("Access-Control-Expose-Headers", "X-Chat-Session-Id");
 
     const userMessage = new ChatMessage({
       chat_session_id: chatSession._id,

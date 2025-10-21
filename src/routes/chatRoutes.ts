@@ -11,8 +11,8 @@ import {
 
 const router = express.Router();
 
-router.post("/", handleChatMessage);
-router.post("/:userId", handleChatMessage);
+router.post("/", handleChatMessage); // New chat (userId optional in body) → controller creates a session
+router.post("/:sessionId", handleChatMessage); // Continue chat by sessionId
 
 router.get("/session/:userId", getSessionByUserId);
 router.get("/session/:userId/messages", getSessionMessagesByUserId);
