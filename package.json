@@ -15,10 +15,11 @@
   "type": "module",
   "main": "src/main.ts",
   "scripts": {
-    "dev": "bun --watch src/main.ts",
     "start": "bun run src/main.ts",
+    "start:lan": "bun run src/main.ts --host 0.0.0.0",
     "build": "bun build src/main.ts --outdir dist",
     "start:prod": "bun dist/main.js",
+    "start:prod:lan": "bun dist/main.js --host 0.0.0.0",
     "scraper": "bun src/runScraper.ts",
     "import-csv": "bun src/scripts/importCSV.ts",
     "mcp:dev": "bun src/mcp/server.ts",

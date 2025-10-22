@@ -5,6 +5,7 @@ This document explains how chat requests are processed, how MCP tools are invoke
 ## Overview
 
 - API entrypoint: [src/index.ts](src/index.ts)
+- Chat routes: [src/routes/chatRoutes.ts](src/routes/chatRoutes.ts)
 - Chat handler: [`handleChatMessage`](src/controllers/chatController.ts)
 - Persistence:
   - [`ChatSession`](src/models/chatSessionModel.ts)
@@ -16,29 +17,59 @@ This document explains how chat requests are processed, how MCP tools are invoke
 - Optional agent with tools (Ollama local): [src/agent/ollamaTools.ts](src/agent/ollamaTools.ts)
 - Process spawner: [src/main.ts](src/main.ts)
 
-## Request Flow (/api/chat)
+## Routes Summary (/api/chat)
 
-1) Client POSTs to `/api/chat` with JSON:
+- POST `/api/chat`
+  - Starts a new session.
+  - Body must include `message`; `userId` is optional (if omitted, a guest user is used/created).
+- POST `/api/chat/:sessionId`
+  - Continues an existing session.
+  - Body must include `message`. If `userId` is provided, it must match the session’s owner.
+
+Session management endpoints:
+
+- GET `/api/chat/session/:userId` → [`getSessionByUserId`](src/controllers/chatController.ts)
+- GET `/api/chat/session/:userId/messages` → [`getSessionMessagesByUserId`](src/controllers/chatController.ts)
+- GET `/api/chat/sessions/:userId` → [`listChatSessionsByUserId`](src/controllers/chatController.ts)
+- GET `/api/chat/session/:sessionId/messages/by-id` → [`getMessagesBySessionId`](src/controllers/chatController.ts)
+- POST `/api/chat/session/:sessionId/end` → [`endSessionById`](src/controllers/chatController.ts)
+- DELETE `/api/chat/session/:sessionId` → [`deleteSessionById`](src/controllers/chatController.ts)
+
+See: [src/routes/chatRoutes.ts](src/routes/chatRoutes.ts)
+
+## Request Flow
+
+1) Client POSTs to:
+   - New session: `/api/chat`
+   - Continue session: `/api/chat/:sessionId`
+   With JSON:
    - Required: `message: string`
-   - Optional: `userId`, `toolName`, `toolArgs` (to explicitly invoke an MCP tool)
+   - Optional: `userId` (in body only), `toolName`, `toolArgs`
 
 2) Controller: [`handleChatMessage`](src/controllers/chatController.ts)
-   - Ensures user identity:
-     - If `userId` not provided, uses/creates a `guest` user.
-     - Finds or creates a `ChatSession` for the user.
+   - If `req.params.sessionId` is present:
+     - Validates and loads the session.
+     - If `userId` is provided in body, enforces ownership (must match `session.user_id`).
+     - Does not create a session.
+   - If no `sessionId`:
+     - Ensures user identity:
+       - If `userId` not provided, uses/creates a `guest` user.
+     - Creates a new `ChatSession`.
    - Persists the user message as a `ChatMessage`.
    - If `toolName` provided:
      - Calls MCP tool via [`getMcpClient`](src/mcp/mcpClient.ts) -> `client.callTool(...)`.
-     - Saves a `ChatMessage` with `sender: "tool"` containing the tool’s JSON result.
-     - Augments the LLM prompt with tool JSON.
-     - On failure, logs error, saves a tool error message, and proceeds without tool data.
+     - Saves a `ChatMessage` with `sender: "tool"` containing the tool’s JSON result (or error).
+     - Augments the LLM prompt with tool JSON when available.
    - Streams LLM output back to client in plain text chunks:
      - Parses each NDJSON piece and writes `parsed.response` to the HTTP response.
      - On stream end/error, saves the final chatbot message (if available).
 
 3) Response
-   - Content-Type: `text/plain; charset=utf-8`
-   - Transfer-Encoding: `chunked`
+   - Headers:
+     - `Content-Type: text/plain; charset=utf-8`
+     - `Transfer-Encoding: chunked`
+     - `X-Chat-Session-Id: <sessionId>` (always included so clients can continue the chat)
+     - `Access-Control-Expose-Headers: X-Chat-Session-Id` (so browsers can read the header)
    - Body: streaming text produced by the LLM.
 
 ### Data Model
@@ -56,7 +87,7 @@ This document explains how chat requests are processed, how MCP tools are invoke
   - Spawns `bun src/mcp/server.ts` with env `{ MONGODB_URI, TAVILY_API_KEY }`.
   - Exposes `client.callTool({ name, arguments })` used by the chat controller.
 
-- The `toolName` and `toolArgs` fields in `/api/chat` request directly trigger an MCP tool call from the API.
+- The `toolName` and `toolArgs` fields in `/api/chat` requests directly trigger an MCP tool call from the API.
 
 ### MCP Server and Tools
 
@@ -125,14 +156,28 @@ Health:
 
 ## Example Requests
 
-- Plain chat:
+- Start a new chat (guest):
 
 ```bash
 curl -N http://localhost:5000/api/chat -H "Content-Type: application/json" ^
   -d "{ \"message\": \"Summarize Baldur's Gate 3.\" }"
 ```
 
-- Chat + MCP tool (hybrid DB + Web):
+- Start a new chat for a specific user:
+
+```bash
+curl -N http://localhost:5000/api/chat -H "Content-Type: application/json" ^
+  -d "{ \"message\": \"Hello\", \"userId\": \"64b7e6f9d9f5a2c1e4f0a123\" }"
+```
+
+- Continue an existing session (use X-Chat-Session-Id from the previous response):
+
+```bash
+curl -N http://localhost:5000/api/chat/64b7e6f9d9f5a2c1e4f0aabc -H "Content-Type: application/json" ^
+  -d "{ \"message\": \"Continue our chat from before.\" }"
+```
+
+- Chat + MCP tool (hybrid DB + Web) in a new session:
 
 ```bash
 curl -N http://localhost:5000/api/chat -H "Content-Type: application/json" ^
@@ -151,18 +196,10 @@ curl -N http://localhost:5000/api/chat -H "Content-Type: application/json" ^
 } }"
 ```
 
-- Direct tool testing via bridge:
-
-```bash
-curl http://localhost:5000/api/mcp/tools
-curl -X POST http://localhost:5000/api/mcp/tools/call -H "Content-Type: application/json" ^
-  -d "{ \"name\": \"web_search\", \"args\": { \"q\": \"Baldur's Gate 3 patch notes\", \"maxResults\": 3 } }"
-```
-
 Notes:
 
-- If your documents use `genres` (array) instead of `genre`, project `genres`.
-- Tool results are embedded as JSON into the LLM prompt by the chat controller.
+- When you POST to `/api/chat` (no `sessionId`), a new session is created and the `X-Chat-Session-Id` header is returned so you can continue the conversation via `/api/chat/:sessionId`.
+- When you POST to `/api/chat/:sessionId`, the request continues that session. If you include `userId` in the body, it must match the session owner.
 
 ## Environment Variables
 
@@ -187,7 +224,7 @@ Ensure these are set in `.env`. Secrets should not be committed.
 
 ## Sequence (High-level)
 
-- Client -> `/api/chat` (message + optional toolName/args)
+- Client -> `/api/chat` (message + optional userId/toolName/args)
 - API saves user message -> optionally invokes MCP tool -> augments prompt
 - API streams LLM output back
 - API saves final chatbot message
