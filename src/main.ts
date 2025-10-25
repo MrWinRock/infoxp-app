@@ -53,12 +53,15 @@ function spawnProc(name: string, cmd: string, args: string[] = [], extraEnv: Rec
 await waitForOllama(MODEL);
 
 const api = spawnProc("api", "bun", ["src/index.ts"]);
-const mcp = spawnProc("mcp", "bun", ["src/mcp/server.ts"]);
+
+const MCP_ORIGIN = (process.env.MCP_ORIGIN || "").trim();
+const useRemoteMcp = MCP_ORIGIN.startsWith("http://") || MCP_ORIGIN.startsWith("https://") || MCP_ORIGIN.startsWith("ws://") || MCP_ORIGIN.startsWith("wss://");
+const mcp = useRemoteMcp ? null : spawnProc("mcp", "bun", ["src/mcp/server.ts"]);
 
 const shutdown = (sig: string) => {
     log(`Received ${sig}, shutting down...`);
     try { api.kill(); } catch { }
-    try { mcp.kill(); } catch { }
+    try { mcp && mcp.kill(); } catch { }
     setTimeout(() => process.exit(0), 1500).unref();
 };
 ["SIGINT", "SIGTERM"].forEach(s => process.on(s, () => shutdown(s)));

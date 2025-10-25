@@ -4,12 +4,21 @@ import { z } from "zod";
 import "dotenv/config";
 
 const TAVILY_API_KEY = process.env.TAVILY_API_KEY || "";
+const WEB_BACKEND = (process.env.MCP_WEB_SEARCH_BACKEND || "ddg").toLowerCase() as "tavily" | "ddg";
+const REQ_TIMEOUT_MS = Math.max(1000, Number(process.env.MCP_WEB_SEARCH_TIMEOUT_MS ?? 6000));
+
+function withTimeout(ms: number) {
+    const ctl = new AbortController();
+    const id = setTimeout(() => ctl.abort(), ms).unref?.();
+    return { signal: ctl.signal, done: () => clearTimeout(id as any) };
+}
 
 console.log("[boot]", {
     pid: process.pid,
     node: process.version,
     bun: (globalThis as any).Bun?.version,
     TAVILY: TAVILY_API_KEY ? "set" : "empty",
+    ORIGIN: process.env.MCP_ORIGIN || "standalone",
 });
 
 type SearchItem = { title: string; url: string; snippet: string };
@@ -20,6 +29,7 @@ async function tavilySearch(
     depth: "basic" | "advanced" = "basic"
 ): Promise<SearchItem[]> {
     if (!TAVILY_API_KEY) return ddgFallback(q, maxResults);
+    const t = withTimeout(REQ_TIMEOUT_MS);
     try {
         const r = await fetch("https://api.tavily.com/search", {
             method: "POST",
@@ -32,6 +42,7 @@ async function tavilySearch(
                 search_depth: depth,
                 max_results: maxResults,
             }),
+            signal: t.signal,
         });
         if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
         const data: any = await r.json();
@@ -44,14 +55,18 @@ async function tavilySearch(
     } catch (e) {
         console.warn("[web] Tavily failed — falling back:", (e as any)?.message || e);
         return ddgFallback(q, maxResults);
+    } finally {
+        t.done();
     }
 }
 
 async function ddgFallback(q: string, maxResults: number): Promise<SearchItem[]> {
+    const t = withTimeout(REQ_TIMEOUT_MS);
     const r = await fetch(
         `https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`,
         {
             headers: { "user-agent": "mcp-web-only/1.0" },
+            signal: t.signal,
         }
     );
     const html = await r.text();
@@ -65,6 +80,7 @@ async function ddgFallback(q: string, maxResults: number): Promise<SearchItem[]>
         const snippet = (m[3] ?? "").replace(/<[^>]+>/g, "");
         out.push({ title, url, snippet });
     }
+    t.done();
     return out;
 }
 
@@ -73,8 +89,12 @@ async function safeWebSearch(
     maxResults: number,
     depth: "basic" | "advanced"
 ): Promise<SearchItem[]> {
+    if (WEB_BACKEND === "ddg") {
+        return ddgFallback(q, maxResults);
+    }
+    // tavily preferred
     if (!TAVILY_API_KEY) {
-        console.warn("[web] Tavily key missing — falling back to DuckDuckGo");
+        console.warn("[web] Tavily key missing — using DuckDuckGo backend");
         return ddgFallback(q, maxResults);
     }
     try {
@@ -127,11 +147,14 @@ server.registerTool(
             return { content: [{ type: "text" as const, text: "Missing required argument: q" }] } as any;
         }
 
+        const started = Date.now();
         const results: SearchItem[] = await safeWebSearch(query, mr, dp);
+        const ms = Date.now() - started;
 
-        console.log("[tool] web_search", { q: query, maxResults: mr, depth: dp });
+        console.log("[tool] web_search", { q: query, maxResults: mr, depth: dp, backend: WEB_BACKEND, ms });
 
         const text =
+            `Note: Using ${WEB_BACKEND} • ${ms} ms\n\n` +
             `Results for: ${query}\n` +
             results.map((r: SearchItem, i: number) => `${i + 1}. ${r.title}\n${r.url}\n${r.snippet}`).join("\n\n");
 

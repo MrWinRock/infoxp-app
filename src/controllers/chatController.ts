@@ -74,12 +74,54 @@ export const handleChatMessage = async (req: Request, res: Response) => {
     await userMessage.save();
 
     let augmentedPrompt = message;
+    const TOOL_TIMEOUT_MS = Math.max(1000, Number(process.env.MCP_TOOL_TIMEOUT_MS ?? 6500));
+
+    const withTimeout = <T,>(p: Promise<T>, ms: number): Promise<T> => {
+      return new Promise<T>((resolve, reject) => {
+        const id = setTimeout(() => reject(new Error(`tool timeout after ${ms}ms`)), ms);
+        p.then(v => { clearTimeout(id); resolve(v); }, e => { clearTimeout(id); reject(e); });
+      });
+    };
+
+    const summarizeToolResult = (toolResult: any): string => {
+      // Extract text content from MCP response and cap length to keep LLM prompt small
+      const MAX_CHARS = Math.max(300, Math.min(2000, Number(process.env.MCP_TOOL_MAX_PROMPT_CHARS ?? 1200)));
+      let text = "";
+      const content = Array.isArray(toolResult?.content) ? toolResult.content : [];
+      for (const item of content) {
+        if (item && typeof item === "object" && item.type === "text" && typeof item.text === "string") {
+          text += (text ? "\n\n" : "") + item.text;
+          if (text.length >= MAX_CHARS) break;
+        }
+      }
+      if (!text) {
+        // fallback to compact JSON, trimmed
+        try {
+          const s = JSON.stringify(toolResult);
+          text = s.length > MAX_CHARS ? s.slice(0, MAX_CHARS) + "…" : s;
+        } catch {
+          text = "[unavailable]";
+        }
+      } else if (text.length > MAX_CHARS) {
+        text = text.slice(0, MAX_CHARS) + "…";
+      }
+      return text;
+    };
+    // If not explicitly requested, optionally auto-run web_search based on env toggle
+    if (!toolName && (String(process.env.MCP_WEB_SEARCH_AUTO || "").toLowerCase() === "1" || String(process.env.MCP_WEB_SEARCH_AUTO || "").toLowerCase() === "true")) {
+      toolName = "web_search";
+      toolArgs = { q: message };
+    }
+
     if (toolName) {
       try {
         // Default web_search args: use the user message as query if q not provided
         if (toolName === "web_search") {
-          const depth = toolArgs?.depth === "advanced" ? "advanced" : "basic";
-          const maxResults = Math.min(Math.max(Number(toolArgs?.maxResults ?? 5), 1), 10);
+          const depth = toolArgs?.depth === "advanced" ? "advanced" : "basic"; // basic is faster
+          const envDefaultMax = Number(process.env.MCP_WEB_SEARCH_MAX_RESULTS ?? 3);
+          const requestedMax = Number(toolArgs?.maxResults ?? envDefaultMax);
+          // Cap tighter for speed: 1..5 with default 3
+          const maxResults = Math.min(Math.max(requestedMax || 1, 1), 3);
           toolArgs = {
             q: toolArgs?.q && String(toolArgs.q).trim().length ? String(toolArgs.q) : message,
             maxResults,
@@ -88,10 +130,10 @@ export const handleChatMessage = async (req: Request, res: Response) => {
         }
 
         const mcp = await getMcpClient();
-        const toolResult = await mcp.callTool({
-          name: toolName,
-          arguments: toolArgs || {}
-        });
+        const toolResult = await withTimeout(
+          mcp.callTool({ name: toolName, arguments: toolArgs || {} }),
+          TOOL_TIMEOUT_MS
+        );
 
         // Log a compact summary for debugging
         console.log("[mcp] tool ok", {
@@ -100,20 +142,30 @@ export const handleChatMessage = async (req: Request, res: Response) => {
           contentItems: Array.isArray((toolResult as any)?.content) ? (toolResult as any).content.length : 0,
         });
 
-        const toolJson = JSON.stringify(toolResult, null, 2);
+        const compactText = summarizeToolResult(toolResult);
         augmentedPrompt =
-          `You have access to tool outputs. Incorporate them helpfully.
+          `You have access to tool outputs. Incorporate them helpfully. Prefer recent, authoritative sources.
 
-Tool (${toolName}) returned:
-${toolJson}
+Tool (${toolName}) returned (trimmed):
+${compactText}
 
 User message:
 ${message}`;
 
+        // Store a truncated version in DB to avoid oversized documents
+        const DB_MAX = Math.max(500, Math.min(20000, Number(process.env.MCP_TOOL_DB_MAX_CHARS ?? 8000)));
+        let toolJson = "";
+        try {
+          toolJson = JSON.stringify(toolResult, null, 2);
+        } catch {
+          toolJson = compactText;
+        }
+        const storedTool = toolJson.length > DB_MAX ? (toolJson.slice(0, DB_MAX) + "…") : toolJson;
+
         await new ChatMessage({
           chat_session_id: chatSession._id,
           sender: "tool",
-          message: `[${toolName}] ${toolJson}`
+          message: `[${toolName}] ${storedTool}`
         }).save();
 
       } catch (e) {
@@ -128,6 +180,9 @@ ${message}`;
           message: `[${toolName}] ERROR: ${(e as Error).message}`
         }).save();
       }
+    } else {
+      // Helpful log when no tool is invoked
+      console.log("[chat] no tool invoked for this message (set MCP_WEB_SEARCH_AUTO=1 to enable auto web_search)");
     }
 
     const botResponseStream = await queryLLM(augmentedPrompt);
